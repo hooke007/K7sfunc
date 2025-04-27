@@ -2,7 +2,7 @@
 文档_ https://github.com/hooke007/MPV_lazy/discussions/574
 
 免手写一键启用k7f的（部分）功能
-当前匹配的 k7sfunc 版本 —— 0.7.11
+当前匹配的 k7sfunc 版本 —— 0.8.1
 
 可用的命令示例（在 input.conf 中写入或在控制台中输入）：
 
@@ -30,6 +30,7 @@ local opt = {
 	model_rife = 46,
 	inference = "dml",
 	gpu = 0,
+	gpu_t = 2,
 }
 local opt_types = {
 	cache_dir = "string",
@@ -45,6 +46,7 @@ local opt_types = {
 	model_rife = "number",
 	inference = "string",
 	gpu = "number",
+	gpu_t = "number",
 }
 
 mp.options.read_options(opt)
@@ -121,21 +123,25 @@ if clip.height < var_height * 0.85 :
     clip = k7f.FMT_CTRL(clip, h_max=0)
 ]]
 	local vpy_part_uai_dml = [[
-    clip = k7f.UAI_DML(clip, model_pth="var_model_pth", gpu=var_gpu)
+    clip = k7f.UAI_DML(clip, model_pth="var_model_pth", gpu=var_gpu, gpu_t=var_gpu_t)
+]]
+	local vpy_part_uai_migx = [[
+    clip = k7f.UAI_MIGX(clip, model_pth="var_model_pth", fp16_qnt=True, gpu=var_gpu, gpu_t=var_gpu_t)
 ]]
 	local vpy_part_uai_trt = [[
-    clip = k7f.UAI_NV_TRT(clip, model_pth="var_model_pth", fp16_qnt=True, gpu=var_gpu, gpu_t=2, st_eng=True)
+    clip = k7f.UAI_NV_TRT(clip, model_pth="var_model_pth", fp16_qnt=True, gpu=var_gpu, gpu_t=var_gpu_t, st_eng=True)
 ]]
 	local inference_port1 = {
 		dml = vpy_part_uai .. vpy_part_uai_dml,
+		migx = vpy_part_uai .. vpy_part_uai_migx,
 		trt = vpy_part_uai .. vpy_part_uai_trt,
 	}
 	local vpy_part_fmt = [[
     clip = k7f.FMT_CTRL(clip, h_max=var_h_max)
 ]]
-	vpy_part_uai = inference_port1[opt.inference]:gsub("var_height", opt.display_h):gsub("var_model_pth", opt.model_uai):gsub("var_gpu", opt.gpu)
+	vpy_part_uai = inference_port1[opt.inference]:gsub("var_height", opt.display_h):gsub("var_model_pth", opt.model_uai):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
 	if opt.prescale_h > 0 then
-		vpy_part_uai = vpy_part_uai:gsub("h_max=0", "h_max=" .. opt.prescale_h)
+		vpy_part_uai = vpy_part_uai:gsub("h_max=0", "h_max=" .. opt.prescale_h, 1)
 	end
 	vpy_part_uai = (vpy_part_uai .. vpy_part_fmt):gsub("var_h_max", opt.display_h)
 	return vpy_part_uai
@@ -147,16 +153,17 @@ if container_fps <= var_clip_fps :
     clip = k7f.FMT_CTRL(clip, h_max=var_h_max)
 ]]
 	local vpy_part_rife_dml = [[
-    clip = k7f.RIFE_DML(clip, model=var_model, fps_in=container_fps, gpu=var_gpu)
+    clip = k7f.RIFE_DML(clip, model=var_model, fps_in=container_fps, gpu=var_gpu, gpu_t=var_gpu_t)
 ]]
 	local vpy_part_rife_trt = [[
-    clip = k7f.RIFE_NV(clip, model=var_model, fps_in=container_fps, gpu=var_gpu)
+    clip = k7f.RIFE_NV(clip, model=var_model, fps_in=container_fps, gpu=var_gpu, gpu_t=var_gpu_t)
 ]]
 	local inference_port2 = {
-    dml = vpy_part_rife .. vpy_part_rife_dml,
-    trt = vpy_part_rife .. vpy_part_rife_trt,
+	dml = vpy_part_rife .. vpy_part_rife_dml,
+	migx = vpy_part_rife .. vpy_part_rife_dml,  -- 尚未支持
+	trt = vpy_part_rife .. vpy_part_rife_trt,
 }
-	vpy_part_rife = inference_port2[opt.inference]:gsub("var_clip_fps", opt.fps_max):gsub("var_h_max", opt.display_h):gsub("var_model", opt.model_rife):gsub("var_gpu", opt.gpu)
+	vpy_part_rife = inference_port2[opt.inference]:gsub("var_clip_fps", opt.fps_max):gsub("var_h_max", opt.display_h):gsub("var_model", opt.model_rife):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
 	return vpy_part_rife
 end
 
