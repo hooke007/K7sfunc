@@ -2,7 +2,7 @@
 文档_ https://github.com/hooke007/MPV_lazy/discussions/574
 
 免手写一键启用k7f的（部分）功能
-当前匹配的 k7sfunc 版本 —— 0.8.1
+当前匹配的 k7sfunc 版本 —— 0.8.3
 
 可用的命令示例（在 input.conf 中写入或在控制台中输入）：
 
@@ -23,7 +23,7 @@ local opt = {
 	preset = 0,
 	append = true,
 
-	display_h = 1440,
+	display_h = -1,
 	prescale_h = 720,
 	fps_max = 32,
 	model_uai = "_test.onnx",
@@ -104,6 +104,22 @@ local function filter_state(label, key, value)
 	return false
 end
 
+local function display_h()
+	local dh = 0
+	if opt.display_h < 0 then
+		dh = mp.get_property_number("display-height", 0)
+		if dh == 0 then
+			dh = 1080
+			mp.msg.warn("无法获取当前显示设备的高度，假定为 1080")
+		end
+	elseif opt.display_h == 0 then
+		dh = 1000000
+	else
+		dh = math.floor(opt.display_h)
+	end
+	return dh
+end
+
 local vpy_part_start = [[
 
 import vapoursynth as vs
@@ -117,6 +133,7 @@ if not (clip == video_in) :
     clip.set_output()
 ]]
 
+-- 如果低于dh的0.85，执行逻辑
 local function vpy_part_uai()
 	local vpy_part_uai = [[
 if clip.height < var_height * 0.85 :
@@ -139,11 +156,11 @@ if clip.height < var_height * 0.85 :
 	local vpy_part_fmt = [[
     clip = k7f.FMT_CTRL(clip, h_max=var_h_max)
 ]]
-	vpy_part_uai = inference_port1[opt.inference]:gsub("var_height", opt.display_h):gsub("var_model_pth", opt.model_uai):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
+	vpy_part_uai = inference_port1[opt.inference]:gsub("var_height", display_h()):gsub("var_model_pth", opt.model_uai):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
 	if opt.prescale_h > 0 then
 		vpy_part_uai = vpy_part_uai:gsub("h_max=0", "h_max=" .. opt.prescale_h, 1)
 	end
-	vpy_part_uai = (vpy_part_uai .. vpy_part_fmt):gsub("var_h_max", opt.display_h)
+	vpy_part_uai = (vpy_part_uai .. vpy_part_fmt):gsub("var_h_max", display_h())
 	return vpy_part_uai
 end
 
@@ -163,7 +180,7 @@ if container_fps <= var_clip_fps :
 	migx = vpy_part_rife .. vpy_part_rife_dml,  -- 尚未支持
 	trt = vpy_part_rife .. vpy_part_rife_trt,
 }
-	vpy_part_rife = inference_port2[opt.inference]:gsub("var_clip_fps", opt.fps_max):gsub("var_h_max", opt.display_h):gsub("var_model", opt.model_rife):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
+	vpy_part_rife = inference_port2[opt.inference]:gsub("var_clip_fps", opt.fps_max):gsub("var_h_max", display_h()):gsub("var_model", opt.model_rife):gsub("var_gpu", opt.gpu, 1):gsub("var_gpu_t", opt.gpu_t)
 	return vpy_part_rife
 end
 
