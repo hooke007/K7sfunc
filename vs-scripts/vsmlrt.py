@@ -1,4 +1,6 @@
-__version__ = "3.22.13"
+### SRC https://github.com/AmusementClub/vs-mlrt/blob/master/scripts/vsmlrt.py
+
+__version__ = "3.22.14"
 
 __all__ = [
     "Backend", "BackendV2",
@@ -639,6 +641,11 @@ def RealESRGAN(
         multiple=multiple,
         overlap_w=overlap_w, overlap_h=overlap_h
     )
+
+    if tile_w % multiple != 0 or tile_h % multiple != 0:
+        raise ValueError(
+            f'{func_name}: tile size must be divisible by {multiple} ({tile_w}, {tile_h})'
+        )
 
     backend = init_backend(
         backend=backend,
