@@ -2,7 +2,7 @@
 文档_ https://github.com/hooke007/MPV_lazy/discussions/574
 
 免手写一键启用k7f的（部分）功能
-当前匹配的 k7sfunc 版本 —— 0.8.3
+当前匹配的 k7sfunc 版本 —— 0.8.9
 
 可用的命令示例（在 input.conf 中写入或在控制台中输入）：
 
