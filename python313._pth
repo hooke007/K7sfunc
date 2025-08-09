@@ -3,4 +3,4 @@ python313.zip
 vs-scripts
 
 # Uncomment to run site.main() automatically
-#import site
+import site
