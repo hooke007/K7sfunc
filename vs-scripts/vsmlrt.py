@@ -1,6 +1,6 @@
 ### SRC https://github.com/AmusementClub/vs-mlrt/blob/master/scripts/vsmlrt.py
 
-__version__ = "3.22.21"
+__version__ = "3.22.35"
 
 __all__ = [
     "Backend", "BackendV2",
@@ -28,6 +28,7 @@ import sys
 import tempfile
 import time
 import typing
+import warnings
 import zlib
 
 import vapoursynth as vs
@@ -62,6 +63,12 @@ def get_plugins_path() -> str:
 
     if path == b"":
         try:
+            path = core.trt_rtx.Version()["path"]
+        except AttributeError:
+            pass
+
+    if path == b"":
+        try:
             path = core.migx.Version()["path"]
         except AttributeError:
             pass
@@ -88,6 +95,7 @@ class Backend:
         verbosity: int = 2
         fp16: bool = False
         fp16_blacklist_ops: typing.Optional[typing.Sequence[str]] = None
+        output_format: int = 0 # 0: fp32, 1: fp16
 
         # internal backend attributes
         supports_onnx_serialization: bool = True
@@ -223,6 +231,7 @@ class Backend:
         fp16: bool = False
         device_id: int = 0
         num_streams: int = 1
+        output_format: int = 0 # 0: fp32, 1: fp16
 
         # internal backend attributes
         supports_onnx_serialization: bool = True
@@ -236,6 +245,7 @@ class Backend:
         verbosity: int = 2
         fp16: bool = False
         fp16_blacklist_ops: typing.Optional[typing.Sequence[str]] = None
+        output_format: int = 0 # 0: fp32, 1: fp16
 
         # internal backend attributes
         supports_onnx_serialization: bool = True
@@ -278,6 +288,7 @@ class Backend:
         fp16: bool = False
         fp16_blacklist_ops: typing.Optional[typing.Sequence[str]] = None
         ml_program: int = 0
+        output_format: int = 0 # 0: fp32, 1: fp16
 
         # internal backend attributes
         supports_onnx_serialization: bool = True
@@ -1438,6 +1449,10 @@ class ArtCNNModel(enum.IntEnum):
     ArtCNN_C4F16 = 10
     ArtCNN_C4F16_DS = 11
     ArtCNN_R16F96_Chroma = 12
+    ArtCNN_C4F16_DN = 13
+    ArtCNN_C4F32_DN = 14
+    ArtCNN_R8F64_JPEG420 = 15
+    ArtCNN_R8F64_JPEG444 = 16
 
 
 def ArtCNN(
@@ -1474,6 +1489,12 @@ def ArtCNN(
                 f'{func_name}: "clip" must be without subsampling! '
                 'Bilinear upsampling is recommended.'
             )
+    elif model in (
+        ArtCNNModel.ArtCNN_R8F64_JPEG420,
+        ArtCNNModel.ArtCNN_R8F64_JPEG444,
+    ):
+        if clip.format.color_family != vs.RGB:
+            raise ValueError(f'{func_name}: "clip" must be of RGB color family')
     elif clip.format.color_family != vs.GRAY:
         raise ValueError(f'{func_name}: "clip" must be of GRAY color family')
 
@@ -1545,7 +1566,6 @@ def get_engine_path(
     max_shapes: typing.Tuple[int, int],
     workspace: typing.Optional[int],
     fp16: bool,
-    device_id: int,
     use_cublas: bool,
     static_shape: bool,
     tf32: bool,
@@ -1560,18 +1580,12 @@ def get_engine_path(
     fp8: bool,
     engine_folder: typing.Optional[str],
     is_rtx: bool = False,
+    trt_version: typing.Tuple[int, int, int] = (0, 0, 0),
+    device_name: str = "",
 ) -> str:
 
     with open(network_path, "rb") as file:
         checksum = zlib.adler32(file.read())
-
-    trt_version = core.trt.Version()["tensorrt_version"].decode()
-
-    try:
-        device_name = core.trt.DeviceProperties(device_id)["name"].decode()
-        device_name = device_name.replace(' ', '-')
-    except AttributeError:
-        device_name = f"device{device_id}"
 
     if static_shape:
         shape_str = f"{opt_shapes[0]}x{opt_shapes[1]}"
@@ -1592,7 +1606,7 @@ def get_engine_path(
         (f"_workspace{workspace}" if workspace is not None else "") +
         f"_opt{builder_optimization_level}" +
         (f"_max-aux-streams{max_aux_streams}" if max_aux_streams is not None else "") +
-        f"_trt-{trt_version}" +
+        "_trt-" + '.'.join(map(str, trt_version)) +
         ("_cublas" if use_cublas else "") +
         ("_cudnn" if use_cudnn else "") +
         "_I-" + ("fp32" if input_format == 0 else "fp16") +
@@ -1680,6 +1694,12 @@ def trtexec(
         bf16 = False
         fp8 = False
 
+    try:
+        device_name = core.trt.DeviceProperties(device_id)["name"].decode()
+        device_name = device_name.replace(' ', '-')
+    except AttributeError:
+        device_name = f"device{device_id}"
+
     engine_path = get_engine_path(
         network_path=network_path,
         min_shapes=min_shapes,
@@ -1687,7 +1707,6 @@ def trtexec(
         max_shapes=max_shapes,
         workspace=workspace,
         fp16=fp16,
-        device_id=device_id,
         use_cublas=use_cublas,
         static_shape=static_shape,
         tf32=tf32,
@@ -1701,9 +1720,11 @@ def trtexec(
         bf16=bf16,
         fp8=fp8,
         engine_folder=engine_folder,
+        trt_version=trt_version,
+        device_name=device_name,
     )
 
-    if os.access(engine_path, mode=os.R_OK):
+    if os.access(engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
         return engine_path
 
     # do not consider alternative path when the engine_folder is given
@@ -1713,7 +1734,7 @@ def trtexec(
             os.path.splitdrive(engine_path)[1][1:]
         )
 
-        if os.access(alter_engine_path, mode=os.R_OK):
+        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
             return alter_engine_path
 
     try:
@@ -1966,7 +1987,7 @@ def migraphx_driver(
         short_path=short_path
     )
 
-    if os.access(mxr_path, mode=os.R_OK):
+    if os.access(mxr_path, mode=os.R_OK) and os.path.getsize(mxr_path) >= 1024:
         return mxr_path
 
     alter_mxr_path = os.path.join(
@@ -1974,7 +1995,7 @@ def migraphx_driver(
         os.path.splitdrive(mxr_path)[1][1:]
     )
 
-    if os.access(alter_mxr_path, mode=os.R_OK):
+    if os.access(alter_mxr_path, mode=os.R_OK) and os.path.getsize(mxr_path) >= 1024:
         return alter_mxr_path
 
     try:
@@ -2046,18 +2067,46 @@ def tensorrt_rtx(
     max_tactics: typing.Optional[int] = None,
     tiling_optimization_level: int = 0,
     l2_limit_for_tiling: int = -1,
+    fp16_io: bool = False,
 ) -> str:
 
     # tensort runtime version
-    # trt_version = parse_trt_version(int(core.trt_rtx.Version()["tensorrt_version"]))
+    trt_version = parse_trt_version(int(core.trt_rtx.Version()["tensorrt_version"]))
 
     if fp16:
-        import onnx
-        from onnxconverter_common.float16 import convert_float_to_float16
-        model = onnx.load(network_path)
-        model = convert_float_to_float16(model, keep_io_types=True)
-        network_path = f"{network_path}_fp16.onnx"
-        onnx.save(model, network_path) # TODO
+        with open(network_path, "rb") as file:
+            checksum = zlib.adler32(file.read())
+
+        dirname, basename = os.path.split(network_path)
+
+        if engine_folder is not None:
+            os.makedirs(engine_folder, exist_ok=True)
+            dirname = engine_folder
+
+        fp16_network_path = f"{os.path.join(dirname, basename)}_{checksum}_fp16{'_io' if fp16_io else ''}.onnx"
+        if not (os.access(fp16_network_path, mode=os.R_OK) and os.path.getsize(fp16_network_path) >= 1024):
+            import onnx
+            model = onnx.load(network_path)
+            try:
+                from onnxconverter_common.float16 import convert_float_to_float16
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    model = convert_float_to_float16(model, keep_io_types=not fp16_io)
+            except Exception:
+                import logging
+                from modelopt.onnx.autocast import convert_to_f16, configure_logging
+                configure_logging(logging.ERROR)
+                model = convert_to_f16(model, keep_io_types=not fp16_io)
+            onnx.save(model, fp16_network_path)
+        network_path = fp16_network_path
+    elif fp16_io:
+        raise ValueError('tensorrt_rtx: "fp16" must be True.')
+
+    try:
+        device_name = core.trt_rtx.DeviceProperties(device_id)["name"].decode()
+        device_name = device_name.replace(' ', '-')
+    except AttributeError:
+        device_name = f"device{device_id}"
 
     engine_path = get_engine_path(
         network_path=network_path,
@@ -2066,22 +2115,23 @@ def tensorrt_rtx(
         max_shapes=max_shapes,
         workspace=workspace,
         fp16=fp16,
-        device_id=device_id,
         use_cublas=False,
         static_shape=static_shape,
         tf32=False,
-        use_cudnn=False,
-        input_format=0,
-        output_format=0,
+        use_cudnn=use_cudnn,
+        input_format=int(fp16_io),
+        output_format=int(fp16_io),
         builder_optimization_level=builder_optimization_level,
         max_aux_streams=max_aux_streams,
         short_path=short_path,
         bf16=False,
         engine_folder=engine_folder,
         is_rtx=True,
+        trt_version=trt_version,
+        device_name=device_name,
     )
 
-    if os.access(engine_path, mode=os.R_OK):
+    if os.access(engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
         return engine_path
 
     # do not consider alternative path when the engine_folder is given
@@ -2091,7 +2141,7 @@ def tensorrt_rtx(
             os.path.splitdrive(engine_path)[1][1:]
         )
 
-        if os.access(alter_engine_path, mode=os.R_OK):
+        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
             return alter_engine_path
 
     try:
@@ -2365,6 +2415,20 @@ def _inference(
     if flexible_output_prop is not None:
         kwargs["flexible_output_prop"] = flexible_output_prop
 
+    if isinstance(backend, (Backend.ORT_CPU, Backend.ORT_DML, Backend.ORT_COREML, Backend.ORT_CUDA)):
+        version_list = core.ort.Version().get("onnxruntime_version", b"0.0.0").split(b'.')
+        if len(version_list) != 3:
+            version = (0, 0, 0)
+        else:
+            version = tuple(map(int, version_list))
+
+        if version >= (1, 18, 0):
+            kwargs["output_format"] = backend.output_format
+
+    elif isinstance(backend, Backend.NCNN_VK):
+        if "output_format" in core.ncnn.Model.signature:
+            kwargs["output_format"] = backend.output_format
+
     if isinstance(backend, Backend.ORT_CPU):
         ret = core.ort.Model(
             clips, network_path,
@@ -2409,7 +2473,6 @@ def _inference(
 
         if version >= (1, 18, 0):
             kwargs["prefer_nhwc"] = backend.prefer_nhwc
-            kwargs["output_format"] = backend.output_format
             kwargs["tf32"] = backend.tf32
 
         ret = core.ort.Model(
@@ -2606,8 +2669,6 @@ def _inference(
             use_cudnn=backend.use_cudnn,
             use_edge_mask_convolutions=backend.use_edge_mask_convolutions,
             input_name=input_name,
-            # input_format=clips[0].format.bits_per_sample == 16,
-            # output_format=backend.output_format,
             builder_optimization_level=backend.builder_optimization_level,
             max_aux_streams=backend.max_aux_streams,
             short_path=backend.short_path,
@@ -2617,6 +2678,11 @@ def _inference(
             max_tactics=backend.max_tactics,
             tiling_optimization_level=backend.tiling_optimization_level,
             l2_limit_for_tiling=backend.l2_limit_for_tiling,
+
+            # the following option is experimental
+            # input_format=clips[0].format.bits_per_sample == 16,
+            # output_format=backend.output_format,
+            fp16_io=clips[0].format.bits_per_sample == 16
         )
         ret = core.trt_rtx.Model(
             clips, engine_path,

@@ -1,8 +1,8 @@
 --[[
 文档_ https://github.com/hooke007/mpv_PlayKit/discussions/574
 
-免手写一键启用k7f的（部分）功能
-当前匹配的 k7sfunc 版本 —— 0.8.9
+免手写vs脚本，一键启用k7f的（部分）功能
+当前匹配的 k7sfunc 版本 —— 0.9.0
 
 可用的命令示例（在 input.conf 中写入或在控制台中输入）：
 
@@ -15,6 +15,7 @@
 local mp = require("mp")
 mp.utils = require("mp.utils")
 mp.options = require("mp.options")
+local msg = require("mp.msg")
 
 local opt = {
 	cache_dir = "~~/",
@@ -110,7 +111,7 @@ local function display_h()
 		dh = mp.get_property_number("display-height", 0)
 		if dh == 0 then
 			dh = 1080
-			mp.msg.warn("无法获取当前显示设备的高度，假定为 1080")
+			msg.warn("无法获取当前显示设备的高度，假定为 1080")
 		end
 	elseif opt.display_h == 0 then
 		dh = 1000000
@@ -228,7 +229,7 @@ local function update_filter()
 
 	if opt.preset == 0 and filter_state("K7Z") then
 		mp.commandv("vf", "remove", "@K7Z")
-		mp.msg.info("滤镜已移除")
+		msg.info("滤镜已移除")
 		return
 	elseif opt.preset == 0 and not filter_state("K7Z") then
 		return
@@ -237,11 +238,11 @@ local function update_filter()
 	gen_vpy()
 	vpy_review_content = "vs脚本内容预览：\n####################" .. vpy_full .. "####################"
 	if opt.vpy_view == "console" then
-		mp.msg.info(vpy_review_content)
+		msg.info(vpy_review_content)
 	elseif opt.vpy_view == "osd" then
 		mp.osd_message(vpy_review_content, 8)
 	elseif opt.vpy_view == "log" then
-		mp.msg.verbose(vpy_review_content)
+		msg.verbose(vpy_review_content)
 	end
 
 	local file, error_message = io.open(output_path, "w")
@@ -260,13 +261,13 @@ local function update_filter()
 				end
 				mp.commandv("vf", "pre", "@K7Z:vapoursynth=\"" .. output_path .. "\"")
 			end
-			mp.msg.info("尝试运行预设：" .. preset_des)
+			msg.info("尝试运行预设：" .. preset_des)
 		else
-			mp.msg.warn("错误：无法写入文件内容到 '" .. output_path .. "': " .. (write_error or "未知写入错误"))
+			msg.warn("错误：无法写入文件内容到 '" .. output_path .. "': " .. (write_error or "未知写入错误"))
 		end
 	else
-		mp.msg.warn("错误：无法打开或创建文件 '" .. output_path .. "' 进行写入。")
-		mp.msg.warn("原因: " .. (error_message or "未知错误"))
+		msg.warn("错误：无法打开或创建文件 '" .. output_path .. "' 进行写入。")
+		msg.warn("原因: " .. (error_message or "未知错误"))
 	end
 end
 
@@ -294,8 +295,8 @@ mp.register_script_message("vpy_update", function(usr_opt, opt_val)
 	end
 	update_filter()
 	if opt.debug then
-		mp.msg.info("vpy_update 当前所有选项的值：\n####################")
+		msg.info("vpy_update 当前所有选项的值：\n####################")
 		print_table(opt)
-		mp.msg.info("####################")
+		msg.info("####################")
 	end
 end)
