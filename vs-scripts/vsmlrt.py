@@ -1,13 +1,10 @@
 ### SRC https://github.com/AmusementClub/vs-mlrt/blob/master/scripts/vsmlrt.py
 
-__version__ = "3.22.35"
+__version__ = "3.22.36"
 
 __all__ = [
     "Backend", "BackendV2",
-    "Waifu2x", "Waifu2xModel",
     "DPIR", "DPIRModel",
-    "RealESRGAN", "RealESRGANModel",
-    "RealESRGANv2", "RealESRGANv2Model",
     "CUGAN",
     "RIFE", "RIFEModel", "RIFEMerge",
     "ArtCNN", "ArtCNNModel",
@@ -353,183 +350,6 @@ fallback_backend: typing.Optional[backendT] = None
 
 
 @enum.unique
-class Waifu2xModel(enum.IntEnum):
-    anime_style_art = 0
-    anime_style_art_rgb = 1
-    photo = 2
-    upconv_7_anime_style_art_rgb = 3
-    upconv_7_photo = 4
-    upresnet10 = 5
-    cunet = 6
-    swin_unet_art = 7
-    swin_unet_photo = 8 # 20230329
-    swin_unet_photo_v2 = 9 # 20230407
-    swin_unet_art_scan = 10 # 20230504
-
-
-def Waifu2x(
-    clip: vs.VideoNode,
-    noise: typing.Literal[-1, 0, 1, 2, 3] = -1,
-    scale: typing.Literal[1, 2, 4] = 2,
-    tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    model: Waifu2xModel = Waifu2xModel.cunet,
-    backend: backendT = Backend.OV_CPU(),
-    preprocess: bool = True
-) -> vs.VideoNode:
-
-    func_name = "vsmlrt.Waifu2x"
-
-    if not isinstance(clip, vs.VideoNode):
-        raise TypeError(f'{func_name}: "clip" must be a clip!')
-
-    if clip.format.sample_type != vs.FLOAT or clip.format.bits_per_sample not in [16, 32]:
-        raise ValueError(f"{func_name}: only constant format 16/32 bit float input supported")
-
-    if not isinstance(noise, int) or noise not in range(-1, 4):
-        raise ValueError(f'{func_name}: "noise" must be -1, 0, 1, 2, or 3')
-
-    if not isinstance(scale, int) or scale not in (1, 2, 4):
-        raise ValueError(f'{func_name}: "scale" must be 1, 2 or 4')
-
-    if not isinstance(model, int) or model not in Waifu2xModel.__members__.values():
-        raise ValueError(f'{func_name}: invalid "model"')
-
-    if model == 0 and noise == 0:
-        raise ValueError(
-            f'{func_name}: "anime_style_art" model'
-            ' does not support noise reduction level 0'
-        )
-
-    if model in range(7) and scale not in (1, 2):
-        raise ValueError(f'{func_name}: "scale" must be 1 or 2')
-
-    if model == 0:
-        if clip.format.color_family != vs.GRAY:
-            raise ValueError(f'{func_name}: "clip" must be of GRAY color family')
-    elif clip.format.color_family != vs.RGB:
-        raise ValueError(f'{func_name}: "clip" must be of RGB color family')
-
-    if overlap is None:
-        overlap_w = overlap_h = [8, 8, 8, 8, 8, 4, 4, 4, 4, 4, 4][model]
-    elif isinstance(overlap, int):
-        overlap_w = overlap_h = overlap
-    else:
-        overlap_w, overlap_h = overlap
-
-    if model == 6:
-        multiple = 4
-    else:
-        multiple = 1
-
-    width, height = clip.width, clip.height
-    if preprocess and model in (0, 1, 2):
-        # emulating cv2.resize(interpolation=cv2.INTER_CUBIC)
-        clip = core.resize.Bicubic(
-            clip,
-            width * 2, height * 2,
-            filter_param_a=0, filter_param_b=0.75
-        )
-
-    (tile_w, tile_h), (overlap_w, overlap_h) = calc_tilesize(
-        tiles=tiles, tilesize=tilesize,
-        width=clip.width, height=clip.height,
-        multiple=multiple,
-        overlap_w=overlap_w, overlap_h=overlap_h
-    )
-
-    if tile_w % multiple != 0 or tile_h % multiple != 0:
-        raise ValueError(
-            f'{func_name}: tile size must be divisible by {multiple} ({tile_w}, {tile_h})'
-        )
-
-    backend = init_backend(
-        backend=backend,
-        trt_opt_shapes=(tile_w, tile_h)
-    )
-
-    folder_path = os.path.join(
-        models_path,
-        "waifu2x",
-        tuple(Waifu2xModel.__members__)[model]
-    )
-
-    if model in (0, 1, 2):
-        if noise == -1:
-            model_name = "scale2.0x_model.onnx"
-        else:
-            model_name = f"noise{noise}_model.onnx"
-    elif model in (3, 4, 5):
-        if noise == -1:
-            model_name = "scale2.0x_model.onnx"
-        else:
-            model_name = f"noise{noise}_scale2.0x_model.onnx"
-    elif model == 6:
-        if scale == 1:
-            scale_name = ""
-        else:
-            scale_name = "scale2.0x_"
-
-        if noise == -1:
-            model_name = "scale2.0x_model.onnx"
-        else:
-            model_name = f"noise{noise}_{scale_name}model.onnx"
-    elif model == 7:
-        if scale == 1:
-            scale_name = ""
-        elif scale == 2:
-            scale_name = "scale2x"
-        elif scale == 4:
-            scale_name = "scale4x"
-
-        if noise == -1:
-            if scale == 1:
-                raise ValueError("swin_unet model for \"noise == -1\" and \"scale == 1\" does not exist")
-
-            model_name = f"{scale_name}.onnx"
-        else:
-            if scale == 1:
-                model_name = f"noise{noise}.onnx"
-            else:
-                model_name = f"noise{noise}_{scale_name}.onnx"
-    elif model in (8, 9, 10):
-        scale_name = "scale4x"
-        if noise == -1:
-            model_name = f"{scale_name}.onnx"
-        else:
-            model_name = f"noise{noise}_{scale_name}.onnx"
-    else:
-        raise ValueError(f"{func_name}: inavlid model {model}")
-
-    network_path = os.path.join(folder_path, model_name)
-
-    clip = inference_with_fallback(
-        clips=[clip], network_path=network_path,
-        overlap=(overlap_w, overlap_h), tilesize=(tile_w, tile_h),
-        backend=backend
-    )
-
-    if model in range(8) and scale == 1 and clip.width // width == 2:
-        # emulating cv2.resize(interpolation=cv2.INTER_CUBIC)
-        # cr: @AkarinVS
-
-        clip = fmtc_resample(
-            clip, scale=0.5,
-            kernel="impulse", impulse=[-0.1875, 1.375, -0.1875],
-            kovrspl=2
-        )
-
-    elif model in (8, 9, 10) and scale != 4:
-        clip = core.resize.Bicubic(
-            clip, clip.width * scale // 4, clip.height * scale // 4,
-            filter_param_a=0, filter_param_b=0.5
-        )
-
-    return clip
-
-
-@enum.unique
 class DPIRModel(enum.IntEnum):
     drunet_gray = 0
     drunet_color = 1
@@ -631,123 +451,6 @@ def DPIR(
     )
 
     return clip
-
-
-@enum.unique
-class RealESRGANModel(enum.IntEnum):
-    # v2
-    animevideo_xsx2 = 0
-    animevideo_xsx4 = 1
-    # v3
-    animevideov3 = 2 # 4x
-    # contributed: janaiV2(2x) https://github.com/the-database/mpv-upscale-2x_animejanai/releases/tag/2.0.0 maintainer: hooke007
-    animejanaiV2L1 = 5005
-    animejanaiV2L2 = 5006
-    animejanaiV2L3 = 5007
-    # contributed: janaiV3-hd(2x) https://github.com/the-database/mpv-upscale-2x_animejanai/releases/tag/3.0.0 maintainer: hooke007
-    animejanaiV3_HD_L1 = 5008
-    animejanaiV3_HD_L2 = 5009
-    animejanaiV3_HD_L3 = 5010
-    # contributed=Ani4K-v2 https://github.com/Sirosky/Upscale-Hub/releases/tag/Ani4K-v2
-    Ani4Kv2_G6i2_Compact = 7000
-    Ani4Kv2_G6i2_UltraCompact = 7001
-
-RealESRGANv2Model = RealESRGANModel
-
-
-def RealESRGAN(
-    clip: vs.VideoNode,
-    tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
-    model: RealESRGANv2Model = RealESRGANv2Model.animevideo_xsx2,
-    backend: backendT = Backend.OV_CPU(),
-    scale: typing.Optional[float] = None
-) -> vs.VideoNode:
-
-    func_name = "vsmlrt.RealESRGAN"
-
-    if not isinstance(clip, vs.VideoNode):
-        raise TypeError(f'{func_name}: "clip" must be a clip!')
-
-    if clip.format.sample_type != vs.FLOAT or clip.format.bits_per_sample not in [16, 32]:
-        raise ValueError(f"{func_name}: only constant format 16/32 bit float input supported")
-
-    if clip.format.color_family != vs.RGB:
-        raise ValueError(f'{func_name}: "clip" must be of RGB color family')
-
-    if not isinstance(model, int) or model not in RealESRGANv2Model.__members__.values():
-        raise ValueError(f'{func_name}: invalid "model"')
-
-    if overlap is None:
-        overlap_w = overlap_h = 8
-    elif isinstance(overlap, int):
-        overlap_w = overlap_h = overlap
-    else:
-        overlap_w, overlap_h = overlap
-
-    multiple = 1
-
-    (tile_w, tile_h), (overlap_w, overlap_h) = calc_tilesize(
-        tiles=tiles, tilesize=tilesize,
-        width=clip.width, height=clip.height,
-        multiple=multiple,
-        overlap_w=overlap_w, overlap_h=overlap_h
-    )
-
-    if tile_w % multiple != 0 or tile_h % multiple != 0:
-        raise ValueError(
-            f'{func_name}: tile size must be divisible by {multiple} ({tile_w}, {tile_h})'
-        )
-
-    backend = init_backend(
-        backend=backend,
-        trt_opt_shapes=(tile_w, tile_h)
-    )
-
-    if model in [0, 1]:
-        network_path = os.path.join(
-            models_path,
-            "RealESRGANv2",
-            f"RealESRGANv2-{tuple(RealESRGANv2Model.__members__)[model]}.onnx".replace('_', '-')
-        )
-    elif model == 2:
-        network_path = os.path.join(
-            models_path,
-            "RealESRGANv2",
-            "realesr-animevideov3.onnx"
-        )
-    elif model in [5005, 5006, 5007, 5008, 5009, 5010, 7000, 7001]:
-        network_path = os.path.join(
-            models_path,
-            "RealESRGANv2",
-            f"{RealESRGANv2Model(model).name}.onnx".replace('_', '-')
-        )
-
-    clip_org = clip
-    clip = inference_with_fallback(
-        clips=[clip], network_path=network_path,
-        overlap=(overlap_w, overlap_h), tilesize=(tile_w, tile_h),
-        backend=backend
-    )
-
-    if scale is not None:
-        scale_h = clip.width // clip_org.width
-        scale_v = clip.height // clip_org.height
-
-        assert scale_h == scale_v
-
-        if scale != scale_h:
-            rescale = scale / scale_h
-
-            if rescale > 1:
-                clip = core.resize.Lanczos(clip, int(clip_org.width * scale), int(clip_org.height * scale), filter_param_a=4)
-            else:
-                clip = fmtc_resample(clip, scale=rescale, kernel="lanczos", taps=4, fh=1/rescale, fv=1/rescale)
-
-    return clip
-
-RealESRGANv2 = RealESRGAN
 
 
 def CUGAN(
@@ -1734,7 +1437,7 @@ def trtexec(
             os.path.splitdrive(engine_path)[1][1:]
         )
 
-        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
+        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(alter_engine_path) >= 1024:
             return alter_engine_path
 
     try:
@@ -2141,7 +1844,7 @@ def tensorrt_rtx(
             os.path.splitdrive(engine_path)[1][1:]
         )
 
-        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(engine_path) >= 1024:
+        if os.access(alter_engine_path, mode=os.R_OK) and os.path.getsize(alter_engine_path) >= 1024:
             return alter_engine_path
 
     try:
