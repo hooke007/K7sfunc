@@ -7,6 +7,7 @@ __all__ = [
     "DPIR", "DPIRModel",
     "CUGAN",
     "RIFE", "RIFEModel", "RIFEMerge",
+    "DRBA", "DRBAModel", "DRBAMerge",
     "ArtCNN", "ArtCNNModel",
     "inference",
     "flexible_inference"
@@ -713,6 +714,15 @@ class RIFEModel(enum.IntEnum):
     v4_26_heavy = 4262
 
 
+@enum.unique
+class DRBAModel(enum.IntEnum):
+    """
+    DRBA model versions
+    """
+    v1 = 1        # DistilDRBA
+    v2_lite = 2
+
+
 def RIFEMerge(
     clipa: vs.VideoNode,
     clipb: vs.VideoNode,
@@ -921,6 +931,128 @@ def RIFEMerge(
                 overlap=(overlap_w, overlap_h), tilesize=(tile_w, tile_h),
                 backend=backend
             )
+
+
+def DRBAMerge(
+    clip0: vs.VideoNode,
+    clip1: vs.VideoNode,
+    clip2: vs.VideoNode,
+    clip3: vs.VideoNode,
+    mask: vs.VideoNode,
+    scale: float = 1.0,
+    ap: bool = False,
+    tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    model: DRBAModel = DRBAModel.v1,
+    backend: backendT = Backend.OV_CPU()
+) -> vs.VideoNode:
+    """ DRBA
+
+    Args:
+        scale: flow scale (0.5 or 1.0)
+        ap: Use auto-padding variant (no size constraints)
+        model: DRBA model version
+        backend: Inference backend
+    """
+
+    func_name = "vsmlrt.DRBAMerge"
+
+    for clip in (clip0, clip1, clip2, clip3, mask):
+        if not isinstance(clip, vs.VideoNode):
+            raise TypeError(f'{func_name}: all inputs must be clips!')
+
+        if clip.format.sample_type != vs.FLOAT or clip.format.bits_per_sample not in [16, 32]:
+            raise ValueError(f"{func_name}: only constant format 16/32 bit float input supported")
+
+    for clip in (clip0, clip1, clip2, clip3):
+        if clip.format.color_family != vs.RGB:
+            raise ValueError(f'{func_name}: frame clips must be RGB color family')
+
+        if clip.width != mask.width or clip.height != mask.height:
+            raise ValueError(f'{func_name}: video dimensions mismatch')
+
+        if clip.num_frames != mask.num_frames:
+            raise ValueError(f'{func_name}: number of frames mismatch')
+
+    if mask.format.color_family != vs.GRAY:
+        raise ValueError(f'{func_name}: "mask" must be of GRAY color family')
+
+    if tiles is not None or tilesize is not None or overlap is not None:
+        raise ValueError(f'{func_name}: tiling is not supported')
+
+    if overlap is None:
+        overlap_w = overlap_h = 0
+    elif isinstance(overlap, int):
+        overlap_w = overlap_h = overlap
+    else:
+        overlap_w, overlap_h = overlap
+
+    if scale not in [0.5, 1.0]:
+        raise ValueError(f'{func_name}: scale must be 0.5 or 1.0')
+
+    scale = float(Fraction(scale))
+
+    # ap variants use internal padding
+    if ap:
+        multiple = 1
+    else:
+        # non-ap variant requires 64/scale alignment
+        tilesize_requirement = 64
+        multiple_frac = tilesize_requirement / Fraction(scale)
+        if multiple_frac.denominator != 1:
+            raise ValueError(f'{func_name}: ({tilesize_requirement} / Fraction(scale)) must be an integer')
+        multiple = int(multiple_frac.numerator)
+
+    if model == DRBAModel.v1:
+        version = "v1"
+    elif model == DRBAModel.v2_lite:
+        version = "v2_lite"
+    else:
+        raise ValueError(f'{func_name}: unsupported model version')
+
+    model_name = f"distilDRBA_{version}"
+    if scale != 1.0:
+        model_name += "_scale"
+    if ap:
+        model_name += "_ap"
+    model_name += ".onnx"
+
+    network_path = os.path.join(
+        models_path,
+        "drba",
+        model_name
+    )
+
+    gray_format = vs.GRAYS if clip0.format.bits_per_sample == 32 else vs.GRAYH
+    scale_placeholder = clip0.std.BlankClip(format=gray_format, color=1.0, keep=True)
+
+    clips = [clip0, clip1, clip2, clip3, mask, scale_placeholder]
+
+    (tile_w, tile_h), (overlap_w, overlap_h) = calc_tilesize(
+        tiles=tiles, tilesize=tilesize,
+        width=clip0.width, height=clip0.height,
+        multiple=multiple,
+        overlap_w=overlap_w, overlap_h=overlap_h
+    )
+
+    # ap variants use internal padding
+    if not ap:
+        if tile_w % multiple != 0 or tile_h % multiple != 0:
+            raise ValueError(
+                f'{func_name}: tile size must be divisible by {multiple} ({tile_w}, {tile_h})'
+            )
+
+    backend = init_backend(
+        backend=backend,
+        trt_opt_shapes=(tile_w, tile_h)
+    )
+
+    return inference_with_fallback(
+        clips=clips, network_path=network_path,
+        overlap=(overlap_w, overlap_h), tilesize=(tile_w, tile_h),
+        backend=backend
+    )
 
 
 def RIFE(
@@ -1135,6 +1267,107 @@ def RIFE(
             return res.std.AssumeFPS(fpsnum = dst_fps.numerator, fpsden = dst_fps.denominator)
         else:
             return res
+
+
+def DRBA(
+    clip: vs.VideoNode,
+    multi: typing.Union[int, Fraction] = 2,
+    scale: float = 1.0,
+    ap: bool = False,
+    tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
+    model: DRBAModel = DRBAModel.v1,
+    backend: backendT = Backend.OV_CPU()
+) -> vs.VideoNode:
+    """ DRBA:
+
+    Args:
+        multi: Multiple of the frame counts (2 for 2x, etc.)
+        scale: flow scale (0.5 or 1.0)
+        ap: Use auto-padding variant
+        model: DRBA model version
+        backend: Inference backend
+    """
+
+    func_name = "vsmlrt.DRBA"
+
+    if not isinstance(clip, vs.VideoNode):
+        raise TypeError(f'{func_name}: "clip" must be a clip!')
+
+    if clip.format.sample_type != vs.FLOAT or clip.format.bits_per_sample not in [16, 32]:
+        raise ValueError(f"{func_name}: only constant format 16/32 bit float input supported")
+
+    if clip.format.color_family != vs.RGB:
+        raise ValueError(f'{func_name}: "clip" must be of RGB color family')
+
+    if not isinstance(multi, (int, Fraction)):
+        raise TypeError(f'{func_name}: "multi" must be an integer or a fractions.Fraction!')
+
+    if tiles is not None or tilesize is not None or overlap is not None:
+        raise ValueError(f'{func_name}: tiling is not supported')
+
+    gray_format = vs.GRAYS if clip.format.bits_per_sample == 32 else vs.GRAYH
+
+    if int(multi) == multi:
+        multi = int(multi)
+
+        if multi < 2:
+            raise ValueError(f'{func_name}: multi must be at least 2')
+
+        gray_format = vs.GRAYS if clip.format.bits_per_sample == 32 else vs.GRAYH
+        n_frames = clip.num_frames
+
+        if n_frames < 4:
+            raise ValueError(f'{func_name}: clip must have at least 4 frames for DRBA')
+
+        # For multi>2, recursively apply 2x interpolation
+        if multi > 2:
+            if multi & (multi - 1) != 0:
+                raise ValueError(f'{func_name}: multi must be a power of 2 for DRBA')
+
+            clip = DRBA(clip, multi=2, scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, 
+                       overlap=overlap, model=model, backend=backend)
+            return DRBA(clip, multi=multi//2, scale=scale, ap=ap, tiles=tiles, tilesize=tilesize,
+                       overlap=overlap, model=model, backend=backend)
+
+        img0 = clip.std.Trim(last=n_frames - 4)           # [F0, F1, ..., Fn-4]
+        img1 = clip.std.Trim(first=1, last=n_frames - 3)  # [F1, F2, ..., Fn-3]
+        img2 = clip.std.Trim(first=2, last=n_frames - 2)  # [F2, F3, ..., Fn-2]
+        img3 = clip.std.Trim(first=3, last=n_frames - 1)  # [F3, F4, ..., Fn-1]
+
+        timepoint = clip.std.BlankClip(format=gray_format, color=0.5, length=n_frames - 3)
+
+        output0 = DRBAMerge(
+            clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=timepoint,
+            scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+            model=model, backend=backend
+        )
+
+        # scene change
+        img1_matched = bits_as(img1, output0)
+
+        if hasattr(core, 'akarin') and hasattr(core.akarin, 'Select'):
+            interpolated = core.akarin.Select([output0, img1_matched], img1_matched, 'x._SceneChangeNext 1 0 ?')
+        else:
+            def handler(n: int, f: vs.VideoFrame) -> vs.VideoNode:
+                if f.props.get('_SceneChangeNext'):
+                    return img1_matched
+                return output0
+            interpolated = core.std.FrameEval(output0, handler, img1_matched)
+
+        res = core.std.Interleave([img1_matched, interpolated])
+
+        last_two = bits_as(clip.std.Trim(first=n_frames - 2), output0)
+        res = res + last_two
+
+        if clip.fps_num != 0 and clip.fps_den != 0:
+            return res.std.AssumeFPS(fpsnum=clip.fps_num * 2, fpsden=clip.fps_den)
+        else:
+            return res
+    else:
+        # Fractional TODO
+        raise NotImplementedError(f'{func_name}: fractional multi is not yet supported')
 
 
 @enum.unique
