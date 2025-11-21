@@ -1321,22 +1321,21 @@ def DRBA(
         if n_frames < 4:
             raise ValueError(f'{func_name}: clip must have at least 4 frames for DRBA')
 
-        # For multi>2, recursively apply 2x interpolation
-        if multi > 2:
-            if multi & (multi - 1) != 0:
-                raise ValueError(f'{func_name}: multi must be a power of 2 for DRBA')
+        img1 = clip
+        img2 = clip.std.DuplicateFrames(frames=n_frames - 1).std.Trim(first=1)
+        img0 = clip.std.DuplicateFrames(frames=0).std.Trim(last=n_frames - 1)
+        img3 = img2.std.DuplicateFrames(frames=n_frames - 1).std.Trim(first=1)
 
-            clip = DRBA(clip, multi=2, scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, 
-                       overlap=overlap, model=model, backend=backend)
-            return DRBA(clip, multi=multi//2, scale=scale, ap=ap, tiles=tiles, tilesize=tilesize,
-                       overlap=overlap, model=model, backend=backend)
+        cnt = multi - 1
+        img0 = core.std.Interleave([img0] * cnt)
+        img1 = core.std.Interleave([img1] * cnt)
+        img2 = core.std.Interleave([img2] * cnt)
+        img3 = core.std.Interleave([img3] * cnt)
 
-        img0 = clip.std.Trim(last=n_frames - 4)           # [F0, F1, ..., Fn-4]
-        img1 = clip.std.Trim(first=1, last=n_frames - 3)  # [F1, F2, ..., Fn-3]
-        img2 = clip.std.Trim(first=2, last=n_frames - 2)  # [F2, F3, ..., Fn-2]
-        img3 = clip.std.Trim(first=3, last=n_frames - 1)  # [F3, F4, ..., Fn-1]
-
-        timepoint = clip.std.BlankClip(format=gray_format, color=0.5, length=n_frames - 3)
+        timepoint = core.std.Interleave([
+            clip.std.BlankClip(format=gray_format, color=i/multi, length=1)
+            for i in range(1, multi)
+        ]).std.Loop(clip.num_frames)
 
         output0 = DRBAMerge(
             clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=timepoint,
@@ -1344,25 +1343,28 @@ def DRBA(
             model=model, backend=backend
         )
 
-        # scene change
-        img1_matched = bits_as(img1, output0)
+        img1 = bits_as(img1, output0)
 
+        # scene change
         if hasattr(core, 'akarin') and hasattr(core.akarin, 'Select'):
-            interpolated = core.akarin.Select([output0, img1_matched], img1_matched, 'x._SceneChangeNext 1 0 ?')
+            interpolated = core.akarin.Select([output0, img1], img1, 'x._SceneChangeNext 1 0 ?')
         else:
             def handler(n: int, f: vs.VideoFrame) -> vs.VideoNode:
                 if f.props.get('_SceneChangeNext'):
-                    return img1_matched
+                    return img1
                 return output0
-            interpolated = core.std.FrameEval(output0, handler, img1_matched)
+            interpolated = core.std.FrameEval(output0, handler, img1)
 
-        res = core.std.Interleave([img1_matched, interpolated])
-
-        last_two = bits_as(clip.std.Trim(first=n_frames - 2), output0)
-        res = res + last_two
+        if multi == 2:
+            res = core.std.Interleave([clip, interpolated])
+        else:
+            res = core.std.Interleave([
+                clip,
+                *(interpolated.std.SelectEvery(cycle=multi-1, offsets=i) for i in range(multi - 1))
+            ])
 
         if clip.fps_num != 0 and clip.fps_den != 0:
-            return res.std.AssumeFPS(fpsnum=clip.fps_num * 2, fpsden=clip.fps_den)
+            return res.std.AssumeFPS(fpsnum=clip.fps_num * multi, fpsden=clip.fps_den)
         else:
             return res
     else:
