@@ -1278,7 +1278,8 @@ def DRBA(
     tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     model: DRBAModel = DRBAModel.v1,
-    backend: backendT = Backend.OV_CPU()
+    backend: backendT = Backend.OV_CPU(),
+    video_player: bool = False
 ) -> vs.VideoNode:
     """ DRBA:
 
@@ -1368,8 +1369,131 @@ def DRBA(
         else:
             return res
     else:
-        # Fractional TODO
-        raise NotImplementedError(f'{func_name}: fractional multi is not yet supported')
+        if clip.fps_num == 0 or clip.fps_den == 0:
+            src_fps = Fraction(1)
+        else:
+            src_fps = clip.fps
+
+        dst_fps = src_fps * multi
+        src_frames = clip.num_frames
+        dst_frames = min(int(src_frames * multi), 2 ** 31 - 1)
+
+        duration_rel = src_fps / dst_fps
+        dst_duration = duration_rel.numerator
+        src_duration = duration_rel.denominator
+
+        if video_player:
+            temp = core.std.BlankClip(clip, length=dst_frames, keep=True)
+
+            def img0_func(n: int) -> vs.VideoNode:
+                left_index = dst_duration * n // src_duration
+                return clip[max(0, left_index - 1)]
+            img0_clip = core.std.FrameEval(temp, img0_func)
+
+            def img1_func(n: int) -> vs.VideoNode:
+                return clip[dst_duration * n // src_duration]
+            img1_clip = core.std.FrameEval(temp, img1_func)
+
+            def img2_func(n: int) -> vs.VideoNode:
+                # no out of range access because of function filter_sc
+                return clip[dst_duration * n // src_duration + 1]
+            img2_clip = core.std.FrameEval(temp, img2_func)
+
+            def img3_func(n: int) -> vs.VideoNode:
+                left_index = dst_duration * n // src_duration
+                return clip[min(src_frames - 1, left_index + 2)]
+            img3_clip = core.std.FrameEval(temp, img3_func)
+
+            temp_gray = core.std.BlankClip(temp, format=gray_format, keep=True)
+            def timepoint_func(n: int) -> vs.VideoNode:
+                current_time = dst_duration * n
+                left_index = current_time // src_duration
+                left_time = src_duration * left_index
+                tp = (current_time - left_time) / src_duration
+                return temp_gray.std.BlankClip(color=tp, keep=True)
+            tp_clip = core.std.FrameEval(temp_gray, timepoint_func)
+
+            output0 = DRBAMerge(
+                clip0=img0_clip, clip1=img1_clip, clip2=img2_clip, clip3=img3_clip, mask=tp_clip,
+                scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                model=model, backend=backend
+            )
+
+            left0 = bits_as(img1_clip, output0)
+
+            def filter_sc(n: int, f: vs.VideoFrame) -> vs.VideoNode:
+                current_time = dst_duration * n
+                left_index = current_time // src_duration
+                if (
+                    current_time % src_duration == 0 or
+                    left_index + 1 >= src_frames or
+                    f.props.get("_SceneChangeNext", False)
+                ):
+                    return left0
+                else:
+                    return output0
+
+            res = core.std.FrameEval(output0, filter_sc, left0)
+        else:
+            if not hasattr(core, 'akarin') or \
+                not hasattr(core.akarin, 'PropExpr') or \
+                not hasattr(core.akarin, 'PickFrames'):
+                raise RuntimeError(
+                    'fractional multi requires plugin akarin '
+                    '(https://github.com/AkarinVS/vapoursynth-plugin/releases)'
+                    ', version v0.96g or later.')
+
+            img0_indices = []
+            left_indices = []
+            right_indices = []
+            img3_indices = []
+            timepoints = []
+            output_indices = []
+
+            for i in range(dst_frames):
+                current_time = dst_duration * i
+                if current_time % src_duration == 0:
+                    output_indices.append(current_time // src_duration)
+                else:
+                    left_index = current_time // src_duration
+                    if left_index + 1 >= src_frames:
+                        # approximate last frame with last frame of source
+                        output_indices.append(src_frames - 1)
+                        break
+                    output_indices.append(src_frames + len(timepoints))
+
+                    left_indices.append(left_index)
+                    right_indices.append(left_index + 1)
+                    img0_indices.append(max(0, left_index - 1))
+                    img3_indices.append(min(src_frames - 1, left_index + 2))
+
+                    left_time = src_duration * left_index
+                    tp = (current_time - left_time) / src_duration
+                    timepoints.append(tp)
+
+            img0 = core.akarin.PickFrames(clip, img0_indices)
+            img1 = core.akarin.PickFrames(clip, left_indices)
+            img2 = core.akarin.PickFrames(clip, right_indices)
+            img3 = core.akarin.PickFrames(clip, img3_indices)
+
+            tp_clip = core.std.BlankClip(clip, format=gray_format, length=len(timepoints))
+            tp_clip = tp_clip.akarin.PropExpr(lambda: dict(_tp=timepoints)).akarin.Expr('x._tp')
+
+            output0 = DRBAMerge(
+                clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=tp_clip,
+                scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                model=model, backend=backend
+            )
+
+            clip0 = bits_as(clip, output0)
+            left0 = bits_as(img1, output0)
+            output = core.akarin.Select([output0, left0], left0, 'x._SceneChangeNext 1 0 ?')
+            res = core.akarin.PickFrames(clip0 + output, output_indices)
+
+        if clip.fps_num != 0 and clip.fps_den != 0:
+            return res.std.AssumeFPS(fpsnum = dst_fps.numerator, fpsden = dst_fps.denominator)
+        else:
+            return res
 
 
 @enum.unique
