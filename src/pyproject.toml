@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "k7sfunc"
+version = "1.0.0"
+description = "VapourSynth video processing functions optimized for media players"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
+authors = [
+    {name = "hooke007"}
+]
+keywords = ["vapoursynth", "video", "processing", "superresolution", "interpolation"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Programming Language :: Python :: 3",
+]
+
+[project.optional-dependencies]
+# AI 推理支持（TensorRT/ONNX Runtime）
+ai = ["onnx"]
+# 开发依赖
+dev = ["build", "twine", "pytest"]
+# 完整安装（包含所有可选依赖）
+all = ["onnx", "vapoursynth>=57"]
+
+[project.urls]
+Homepage = "https://github.com/hooke007/K7sfunc"
+Documentation = "https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc"
+Repository = "https://github.com/hooke007/K7sfunc"
+Issues = "https://github.com/hooke007/mpv_PlayKit/discussions"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["k7sfunc*"]
+exclude = ["tests*"]

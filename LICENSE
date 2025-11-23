@@ -1,0 +1,4 @@
+### License
+
+- The root directory and all unspecified parts of the repository are licensed under the MIT License.
+- Code under the `src/` directory is licensed under the GPLv3 License, see `src/LICENSE`.

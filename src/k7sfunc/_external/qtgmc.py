@@ -2,12 +2,12 @@
 ### K7sfunc 的可选附属脚本
 ##################################################
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [ "QTGMC_obs", "QTGMCv2"]
 
 
-from k7sfunc import LooseVersion
+from .. import LooseVersion
 import functools
 import math
 import typing
@@ -50,7 +50,7 @@ def QTGMC_obs(
 
 	global dfttest2
 	if dfttest2 is None :
-		import dfttest2
+		from . import dfttest2
 	if LooseVersion(dfttest2.__version__) < LooseVersion("0.3.3") :
 		raise EnvironmentError("依赖 dfttest2 的版本号过低，至少 0.3.3")
 
