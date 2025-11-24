@@ -15,7 +15,6 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from ._external import vsmlrt
 from .mod_helper import (
 	ONNX_ANZ,
 	DCF,
@@ -50,6 +49,8 @@ def UAI_ORT_HUB(
 	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
 
 	_check_plugin(func_name, "ort")
+
+	from ._external import vsmlrt
 
 	plg_dir = os.path.dirname(core.ort.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
@@ -165,6 +166,8 @@ def UAI_MIGX(
 
 	_check_plugin(func_name, "migx")
 
+	from ._external import vsmlrt
+
 	plg_dir = os.path.dirname(core.migx.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
 	if not os.path.exists(mdl_pth_rel) and not os.path.exists(model_pth) :
@@ -240,6 +243,8 @@ def UAI_NV_TRT(
 	_validate_numeric(func_name, "ws_size", ws_size, min_val=0, int_only=True)
 
 	_check_plugin(func_name, "trt")
+
+	from ._external import vsmlrt
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth

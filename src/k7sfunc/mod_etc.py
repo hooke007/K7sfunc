@@ -14,7 +14,6 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from ._external import qtgmc
 from .mod_helper import EQ
 
 __all__ = [
@@ -246,6 +245,8 @@ def DEINT_EX(
 	_validate_literal(func_name, "tff", tff, [0, 1, 2])
 	_validate_bool(func_name, "cpu", cpu)
 	_validate_literal(func_name, "gpu", gpu, [-1, 0, 1, 2])
+
+	from ._external import qtgmc
 
 	h_in = input.height
 

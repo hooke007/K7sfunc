@@ -14,7 +14,6 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from ._external import vsmlrt, nnedi3_resample
 
 __all__ = [
 	"ACNET_STD",
@@ -105,6 +104,8 @@ def ARTCNN_NV(
 	_check_plugin(func_name, "trt")
 	_check_plugin(func_name, "akarin")
 
+	from ._external import vsmlrt
+
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["ArtCNN_R16F96", "ArtCNN_R8F64", "ArtCNN_R8F64_DS"][[6, 7, 8].index(model)]
 	mdl_pth = plg_dir + "/models/ArtCNN/" + mdl_fname + ".onnx"
@@ -166,6 +167,8 @@ def CUGAN_NV(
 	_check_plugin(func_name, "trt")
 	_check_plugin(func_name, "akarin")
 
+	from ._external import vsmlrt
+
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["pro-no-denoise3x-up2x", "pro-conservative-up2x", "pro-denoise3x-up2x"][[-1, 0, 3].index(nr_lv)]
 	mdl_pth = plg_dir + "/models/cugan/" + mdl_fname + ".onnx"
@@ -221,6 +224,8 @@ def EDI_US_STD(
 		_check_plugin(func_name, "znedi3")
 	else :
 		_check_plugin(func_name, "nnedi3cl")
+
+	from ._external import nnedi3_resample
 
 	if ext_proc :
 		fmt_in = input.format.id

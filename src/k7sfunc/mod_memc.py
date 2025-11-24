@@ -16,7 +16,6 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from ._external import vsmlrt
 from .mod_helper import (
 	SCENE_DETECT,
 	FMT2YUV_SP,
@@ -171,6 +170,8 @@ def DRBA_NV(
 	elif sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 	_check_plugin(func_name, "akarin")
+
+	from ._external import vsmlrt
 
 	model_scale = False
 	model_ap = False
@@ -333,6 +334,8 @@ def RIFE_ORT_HUB(
 		_check_plugin(func_name, "misc")
 	elif sc_mode == 2 :
 		_check_plugin(func_name, "mv")
+
+	from ._external import vsmlrt
 
 	if backend_type == "coreml" :
 		## CoreML 缺失 akarin，不支持 ext_proc
@@ -528,6 +531,8 @@ def RIFE_NV(
 	elif sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 	_check_plugin(func_name, "akarin")
+
+	from ._external import vsmlrt
 
 	#ext_proc = True
 	#t_tta = False

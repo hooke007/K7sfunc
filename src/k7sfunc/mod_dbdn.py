@@ -16,7 +16,6 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from ._external import vsmlrt, dfttest2
 from .mod_helper import LAYER_HIGH
 
 __all__ = [
@@ -57,6 +56,8 @@ def DPIR_TRT_HUB(
 
 	_check_plugin(func_name, "trt")
 	_check_plugin(func_name, "akarin")
+
+	from ._external import vsmlrt
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	if work_type == "deblock" :
@@ -356,6 +357,8 @@ def DFTT_HUB(
 	_validate_numeric(func_name, "size_sb", size_sb, min_val=1, int_only=True)
 	_validate_numeric(func_name, "size_so", size_so, min_val=1, int_only=True)
 	_validate_numeric(func_name, "size_tb", size_tb, min_val=1, int_only=True)
+
+	from ._external import dfttest2
 
 	fmt_in = input.format.id
 
