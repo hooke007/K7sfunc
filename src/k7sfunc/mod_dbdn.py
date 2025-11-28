@@ -349,6 +349,7 @@ def DFTT_HUB(
 	size_tb : int,
 	backend_param,
 	func_name : str,
+	dfttest2,
 ) -> vs.VideoNode :
 
 	_validate_input_clip(func_name, input)
@@ -357,8 +358,6 @@ def DFTT_HUB(
 	_validate_numeric(func_name, "size_sb", size_sb, min_val=1, int_only=True)
 	_validate_numeric(func_name, "size_so", size_so, min_val=1, int_only=True)
 	_validate_numeric(func_name, "size_tb", size_tb, min_val=1, int_only=True)
-
-	from ._external import dfttest2
 
 	fmt_in = input.format.id
 
@@ -391,6 +390,8 @@ def DFTT_STD(
 	func_name = "DFTT_STD"
 	_check_plugin(func_name, "dfttest2_cpu")
 
+	from ._external import dfttest2
+
 	def backend_param(dfttest2):
 		return dfttest2.Backend.CPU()
 
@@ -403,6 +404,7 @@ def DFTT_STD(
 		size_tb=size_tb,
 		backend_param=backend_param,
 		func_name=func_name,
+		dfttest2=dfttest2,
 	)
 
 ##################################################
@@ -426,6 +428,8 @@ def DFTT_NV(
 
 	_check_plugin(func_name, "dfttest2_nvrtc")
 
+	from ._external import dfttest2
+
 	def backend_param(dfttest2):
 		return dfttest2.Backend.NVRTC(device_id=gpu, num_streams=gpu_t)
 
@@ -438,6 +442,7 @@ def DFTT_NV(
 		size_tb=size_tb,
 		backend_param=backend_param,
 		func_name=func_name,
+		dfttest2=dfttest2,
 	)
 
 ##################################################

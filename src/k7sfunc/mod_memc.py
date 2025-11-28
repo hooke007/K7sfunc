@@ -317,6 +317,7 @@ def RIFE_ORT_HUB(
 	backend_type : str,
 	backend_param,
 	func_name : str,
+	vsmlrt,
 ) -> vs.VideoNode :
 
 	_validate_input_clip(func_name, input)
@@ -334,8 +335,6 @@ def RIFE_ORT_HUB(
 		_check_plugin(func_name, "misc")
 	elif sc_mode == 2 :
 		_check_plugin(func_name, "mv")
-
-	from ._external import vsmlrt
 
 	if backend_type == "coreml" :
 		## CoreML 缺失 akarin，不支持 ext_proc
@@ -438,6 +437,8 @@ def RIFE_COREML(
 	func_name = "RIFE_COREML"
 	_validate_literal(func_name, "be", be, [0, 1])
 
+	from ._external import vsmlrt
+
 	fps_den = 1 ## akarin 缺失mac版，暂锁整数倍
 	def backend_param(ext_proc):
 		return vsmlrt.BackendV2.ORT_COREML(num_streams=gpu_t, fp16=False, ml_program=be) ## CoreML 因未知性能问题禁用fp16
@@ -454,6 +455,7 @@ def RIFE_COREML(
 		backend_type="coreml",
 		backend_param=backend_param,
 		func_name=func_name,
+		vsmlrt=vsmlrt,
 	)
 
 ##################################################
@@ -475,6 +477,8 @@ def RIFE_DML(
 	func_name = "RIFE_DML"
 	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
 
+	from ._external import vsmlrt
+
 	def backend_param(ext_proc):
 		fp16 = True if ext_proc else False ## https://github.com/AmusementClub/vs-mlrt/issues/56#issuecomment-2801745592
 		return vsmlrt.BackendV2.ORT_DML(num_streams=gpu_t, fp16=fp16, device_id=gpu)
@@ -491,6 +495,7 @@ def RIFE_DML(
 		backend_type="dml",
 		backend_param=backend_param,
 		func_name=func_name,
+		vsmlrt=vsmlrt,
 	)
 
 ##################################################

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "k7sfunc"
-version = "1.0.1"
+version = "1.0.2"
 description = "VapourSynth video processing functions optimized for media players"
 readme = "README.md"
 requires-python = ">=3.10"

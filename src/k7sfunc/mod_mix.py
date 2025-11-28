@@ -40,6 +40,7 @@ def UAI_ORT_HUB(
 	gpu_t : int,
 	backend_param,
 	func_name : str,
+	vsmlrt,
 ) -> vs.VideoNode :
 
 	_validate_input_clip(func_name, input)
@@ -49,8 +50,6 @@ def UAI_ORT_HUB(
 	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
 
 	_check_plugin(func_name, "ort")
-
-	from ._external import vsmlrt
 
 	plg_dir = os.path.dirname(core.ort.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
@@ -98,6 +97,8 @@ def UAI_COREML(
 	func_name = "UAI_COREML"
 	_validate_literal(func_name, "be", be, [0, 1])
 
+	from ._external import vsmlrt
+
 	def backend_param(fp16_qnt):
 		## fp16模型或量化都存在未知的性能问题，暂时建议维持fp32链路
 		return vsmlrt.BackendV2.ORT_COREML(ml_program=be, num_streams=gpu_t, fp16=fp16_qnt)
@@ -110,6 +111,7 @@ def UAI_COREML(
 		gpu_t=gpu_t,
 		backend_param=backend_param,
 		func_name=func_name,
+		vsmlrt=vsmlrt,
 	)
 
 ##################################################
@@ -128,6 +130,8 @@ def UAI_DML(
 	func_name = "UAI_DML"
 	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
 
+	from ._external import vsmlrt
+
 	def backend_param(fp16_qnt):
 		return vsmlrt.BackendV2.ORT_DML(device_id=gpu, num_streams=gpu_t, fp16=fp16_qnt)
 
@@ -139,6 +143,7 @@ def UAI_DML(
 		gpu_t=gpu_t,
 		backend_param=backend_param,
 		func_name=func_name,
+		vsmlrt=vsmlrt,
 	)
 
 ##################################################
