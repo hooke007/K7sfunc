@@ -1,4 +1,3 @@
 # K7sfunc
-个人 vapoursynth 常用功能合集
 
-https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
+个人的 vapoursynth (for mpv) 工具集
