@@ -38,8 +38,6 @@ def COLOR_P3W_FIX(
 ) -> vs.VideoNode :
 
 	func_name = "COLOR_P3W_FIX"
-	_validate_input_clip(func_name, input)
-	_validate_bool(func_name, "linear", linear)
 
 	_check_plugin(func_name, "fmtc")
 

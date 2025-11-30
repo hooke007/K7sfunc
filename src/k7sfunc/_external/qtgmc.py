@@ -2,19 +2,17 @@
 ### K7sfunc 的可选附属脚本
 ##################################################
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 __all__ = [ "QTGMC_obs", "QTGMCv2"]
 
 
-from .. import LooseVersion
 import functools
 import math
 import typing
 import vapoursynth as vs
 
 core = vs.core
-dfttest2 = None
 
 #-------------------------------------------------------------------#
 #                                                                   #
@@ -48,11 +46,7 @@ def QTGMC_obs(
 		StabilizeNoise=None, InputType=0, ProgSADMask=None, FPSDivisor=1, ShutterBlur=0, ShutterAngleSrc=180, ShutterAngleOut=180, SBlurLimit=4, Border=False, Precise=None, Tuning='None',
 		ShowSettings=False, ForceTR=0, TFF=None, pscrn=None, int16_prescreener=None, int16_predictor=None, exp=None, alpha=None, beta=None, gamma=None, nrad=None, vcheck=None, opencl=False, device=None):
 
-	global dfttest2
-	if dfttest2 is None :
-		from . import dfttest2
-	if LooseVersion(dfttest2.__version__) < LooseVersion("0.3.3") :
-		raise EnvironmentError("依赖 dfttest2 的版本号过低，至少 0.3.3")
+	from . import dfttest2
 
 	def _Clamp(clip, bright_limit, dark_limit, overshoot=0, undershoot=0, planes=None):
 		if not (isinstance(clip, vs.VideoNode) and isinstance(bright_limit, vs.VideoNode) and isinstance(dark_limit, vs.VideoNode)):
