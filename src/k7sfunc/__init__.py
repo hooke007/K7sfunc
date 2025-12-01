@@ -1,5 +1,6 @@
 
-from .version import __version__
+__version__ = "1.0.4"
+
 from ._internal import vs_t_dft, LooseVersion
 
 from .mod_helper import *

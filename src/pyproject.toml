@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "k7sfunc"
-version = "1.0.3"
 description = "VapourSynth video processing functions optimized for media players"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +20,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
     "Programming Language :: Python :: 3",
 ]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 # AI 推理支持（TensorRT/ONNX Runtime）
@@ -38,6 +38,9 @@ Issues = "https://github.com/hooke007/mpv_PlayKit/discussions"
 
 [tool.setuptools]
 package-dir = {"" = "."}
+
+[tool.setuptools.dynamic]
+version = {attr = "k7sfunc.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
