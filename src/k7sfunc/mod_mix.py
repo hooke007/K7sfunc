@@ -60,14 +60,10 @@ def UAI_ORT_HUB(
 	fmt_in = input.format.id
 	colorlv = getattr(input.get_frame(0).props, "_ColorRange", 0)
 
-	fp16_mdl = None
-	check_mdl = ONNX_ANZ(input=mdl_pth)
-	if check_mdl == 1 :
-		fp16_mdl = False
-	elif check_mdl == 10 :
-		fp16_mdl = True
-	else :
-		raise vs.Error(f"模块 {func_name} 的输入模型的输入精度不受支持")
+	mdl_info = ONNX_ANZ(input=mdl_pth)
+	if not mdl_info["valid"] :
+		raise vs.Error(f"模块 {func_name} 的输入模型无效: {mdl_info['error']}")
+	fp16_mdl = mdl_info["elem_type_name"] == "fp16"
 	if fp16_mdl :
 		fp16_qnt = False ## ort对于fp16模型自动使用对应的IO
 
@@ -182,14 +178,10 @@ def UAI_MIGX(
 	fmt_in = input.format.id
 	colorlv = getattr(input.get_frame(0).props, "_ColorRange", 0)
 
-	fp16_mdl = None
-	check_mdl = ONNX_ANZ(input=mdl_pth)
-	if check_mdl == 1 :
-		fp16_mdl = False
-	elif check_mdl == 10 :
-		fp16_mdl = True
-	else :
-		raise vs.Error(f"模块 {func_name} 的输入模型的输入精度不受支持")
+	mdl_info = ONNX_ANZ(input=mdl_pth)
+	if not mdl_info["valid"] :
+		raise vs.Error(f"模块 {func_name} 的输入模型无效: {mdl_info['error']}")
+	fp16_mdl = mdl_info["elem_type_name"] == "fp16"
 	if fp16_mdl :
 		fp16_qnt = True   ### 量化精度与模型精度匹配
 
@@ -260,14 +252,10 @@ def UAI_NV_TRT(
 	fmt_in = input.format.id
 	colorlv = getattr(input.get_frame(0).props, "_ColorRange", 0)
 
-	fp16_mdl = None
-	check_mdl = ONNX_ANZ(input=mdl_pth)
-	if check_mdl == 1 :
-		fp16_mdl = False
-	elif check_mdl == 10 :
-		fp16_mdl = True
-	else :
-		raise vs.Error(f"模块 {func_name} 的输入模型的输入精度不受支持")
+	mdl_info = ONNX_ANZ(input=mdl_pth)
+	if not mdl_info["valid"] :
+		raise vs.Error(f"模块 {func_name} 的输入模型无效: {mdl_info['error']}")
+	fp16_mdl = mdl_info["elem_type_name"] == "fp16"
 	if fp16_mdl :
 		fp16_qnt = True   ### 量化精度与模型精度匹配
 

@@ -22,9 +22,6 @@ pip install k7sfunc
 ```bash
 # 安装 AI 推理支持
 pip install k7sfunc[ai]
-
-# 安装所有可选依赖
-pip install k7sfunc[all]
 ```
 
 ## 使用示例
@@ -51,5 +48,6 @@ GPLv3 License
 
 ## 链接
 
-- 完整文档：https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
-- 提问与反馈：https://github.com/hooke007/mpv_PlayKit/discussions
+- 与 mpv-lazy 发行同步的版本文档： https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
+- 即时版本的文档： https://github.com/hooke007/K7sfunc/tree/main/doc
+- 提问与反馈： https://github.com/hooke007/mpv_PlayKit/discussions

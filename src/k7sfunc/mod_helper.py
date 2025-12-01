@@ -290,28 +290,86 @@ def RANGE_CHANGE(
 
 def ONNX_ANZ(
 	input : str = "",
-	check_mdl : bool = True,
-) :
+	loose : typing.Literal[0, 1, 2] = 1,
+) -> dict :
+	"""解析ONNX模型信息
+	Args:
+		loose:
+			0 - 严格模式：维度必须为 [-1, 3, -1, -1] + 结构检查
+			1 - 标准模式：维度必须为 [-1, 3, -1, -1]
+			2 - 宽松模式：允许静态维度，但通道数必须为 3
+	Returns:
+		dict: 包含 valid, elem_type, elem_type_name, shape, error
+	"""
 
 	func_name = "ONNX_ANZ"
 	onnx = _check_script(func_name, "onnx")
-	from onnx.checker import ValidationError
+	from onnx import TensorProto
 
-	if check_mdl :
-		model_path = input
-		try:
-			onnx.checker.check_model(model_path)
-		except ValidationError as e:
-			print(f"模型无效，错误信息: {e}")
-		except Exception as e:
-			print(f"其他错误: {e}")
+	result = {
+		"valid": False,
+		"elem_type": None,
+		"elem_type_name": None,
+		"shape": None,
+		"error": None,
+	}
 
-		input_info = onnx.load(model_path).graph.input[0]
-		input_info = input_info.type.tensor_type
-		elem_type = input_info.elem_type  ## 10➡️FP16 或 1➡️FP32
-		#shape = input_info.shape[0]
+	model_path = input
 
-	return elem_type
+	try:
+		model = onnx.load(model_path)
+
+		if loose == 0 :
+			from onnx.checker import ValidationError
+			try:
+				onnx.checker.check_model(model)
+			except ValidationError as e:
+				result["error"] = f"模型无效，错误信息: {e}"
+				return result
+
+		input_info = model.graph.input[0]
+		tensor_type = input_info.type.tensor_type
+
+		## 10➡️FP16 或 1➡️FP32
+		elem_type = tensor_type.elem_type
+		result["elem_type"] = elem_type
+
+		if elem_type == TensorProto.FLOAT :
+			result["elem_type_name"] = "fp32"
+		elif elem_type == TensorProto.FLOAT16 :
+			result["elem_type_name"] = "fp16"
+		else :
+			result["error"] = f"不支持的数据类型: {elem_type}，仅支持 fp16(10) 或 fp32(1)"
+			return result
+
+		shape = []
+		for dim in tensor_type.shape.dim :
+			if dim.dim_param :
+				shape.append(-1)
+			else :
+				shape.append(dim.dim_value if dim.dim_value > 0 else -1)
+		result["shape"] = shape
+
+		## NCHW
+		if len(shape) != 4 :
+			result["error"] = f"输入维度数量错误: 期望 4 维 (NCHW)，实际 {len(shape)} 维"
+			return result
+
+		if shape[1] != 3 :
+			result["error"] = f"输入通道数错误: 期望 3 通道，实际 {shape[1]} 通道"
+			return result
+
+		if loose in [0, 1] :
+			if shape[0] != -1 or shape[2] != -1 or shape[3] != -1 :
+				result["error"] = f"输入维度格式错误: 期望 [-1, 3, -1, -1]，实际 {shape}"
+				return result
+
+		result["valid"] = True
+
+	except Exception as e:
+		result["error"] = f"解析模型失败: {e}"
+
+	return result
 
 ##################################################
 ## 像素值限制
