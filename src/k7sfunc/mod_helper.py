@@ -295,9 +295,9 @@ def ONNX_ANZ(
 	"""解析ONNX模型信息
 	Args:
 		loose:
-			0 - 严格模式：维度必须为 [-1, 3, -1, -1] + 结构检查
-			1 - 标准模式：维度必须为 [-1, 3, -1, -1]
-			2 - 宽松模式：允许静态维度，但通道数必须为 3
+			0 - 严格模式：维度必须为 [-1/1, 1/3, -1, -1] + 结构检查
+			1 - 标准模式：维度必须为 [-1/1, 1/3, -1, -1]
+			2 - 宽松模式：允许静态维度，但通道数必须为 1 或 3
 	Returns:
 		dict: 包含 valid, elem_type, elem_type_name, shape, error
 	"""
@@ -355,13 +355,14 @@ def ONNX_ANZ(
 			result["error"] = f"输入维度数量错误: 期望 4 维 (NCHW)，实际 {len(shape)} 维"
 			return result
 
-		if shape[1] != 3 :
-			result["error"] = f"输入通道数错误: 期望 3 通道，实际 {shape[1]} 通道"
+		if shape[1] not in [1, 3] :
+			result["error"] = f"输入通道数错误: 期望 1 或 3 通道，实际 {shape[1]} 通道"
 			return result
 
 		if loose in [0, 1] :
-			if shape[0] != -1 or shape[2] != -1 or shape[3] != -1 :
-				result["error"] = f"输入维度格式错误: 期望 [-1, 3, -1, -1]，实际 {shape}"
+			if shape[0] not in [-1, 1] or shape[2] != -1 or shape[3] != -1 :
+				expected_shape = f"[-1/1, {shape[1]}, -1, -1]"
+				result["error"] = f"输入维度格式错误: 期望 {expected_shape}，实际 {shape}"
 				return result
 
 		result["valid"] = True
