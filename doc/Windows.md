@@ -103,7 +103,7 @@ step03.set_output()                                                        # 行
 
 # 2. 模块说明
 
-**对应的版本 1.0.5 **
+**对应的版本 1.1.1 **
 
 - _带 `_NV` 后缀的模块为nvidia RTX显卡专用。_
 
@@ -370,7 +370,7 @@ DRBA_NV(input=?, model=2, int8_qnt=False, turbo=1, fps_in=23.976, fps_num=2, fps
 | <kbd>turbo</kbd> | `0`\|`1`\|`2` | 使用内部提速技巧的等级， `0` 为禁用 |
 | <kbd>fps_in</kbd> | 浮点 | 指定输入源的帧率 |
 | <kbd>fps_num</kbd> | 整数 | <kbd>fps_num</kbd>/<kbd>fps_den</kbd> 的值即帧率倍数（计算结果可为浮点） |
-| <kbd>fps_den</kbd> | 整数 | 当前无效，锁定为1 |
+| <kbd>fps_den</kbd> | 整数 ||
 | <kbd>sc_mode</kbd> | `0`\|`1`\|`2` | 场景切换检测的模式， `0` 为禁用 |
 | <kbd>gpu</kbd> | `0`\|`1`\|`2` | 指定显卡， `0` 为排序一号 |
 | <kbd>gpu_t</kbd> | 整数 | 指定显卡线程数（最大不要超过 `4` ） |
