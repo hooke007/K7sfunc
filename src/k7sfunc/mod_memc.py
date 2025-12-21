@@ -506,7 +506,7 @@ def RIFE_NV(
 	input : vs.VideoNode,
 	model : typing.Literal[46, 4251, 426, 4262] = 46,
 	int8_qnt : bool = False,
-	turbo : bool = True,
+	turbo : typing.Literal[0, 1, 2] = 2,
 	fps_in : float = 23.976,
 	fps_num : int = 2,
 	fps_den : int = 1,
@@ -520,7 +520,7 @@ def RIFE_NV(
 	_validate_input_clip(func_name, input)
 	_validate_literal(func_name, "model", model, [46, 4251, 426, 4262])
 	_validate_bool(func_name, "int8_qnt", int8_qnt)
-	_validate_bool(func_name, "turbo", turbo)
+	_validate_literal(func_name, "turbo", turbo, [0, 1, 2])
 	_validate_numeric(func_name, "fps_in", fps_in, min_val=0.0, exclusive_min=True)
 	_validate_numeric(func_name, "fps_num", fps_num, min_val=2, int_only=True)
 	if not isinstance(fps_den, int) or fps_den >= fps_num or fps_num/fps_den <= 1 :
@@ -541,12 +541,15 @@ def RIFE_NV(
 
 	#ext_proc = True
 	#t_tta = False
-	if turbo :
-		ext_proc = False
-		t_tta = False
-	else :
+	if turbo == 0 :
 		ext_proc = True
 		t_tta = True
+	elif turbo == 1 :
+		ext_proc = True
+		t_tta = False
+	elif turbo == 2 :
+		ext_proc = False
+		t_tta = False
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_pname = "rife/" if ext_proc else "rife_v2/"
