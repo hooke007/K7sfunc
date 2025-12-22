@@ -255,11 +255,10 @@ def DRBA_NV(
 def RIFE_STD(
 	input : vs.VideoNode,
 	model : typing.Literal[23, 70, 72, 73] = 23,
-	t_tta : bool = False,
+	turbo : typing.Literal[0, 1, 2] = 2,
 	fps_num : int = 2,
 	fps_den : int = 1,
 	sc_mode : typing.Literal[0, 1, 2] = 1,
-	skip : bool = True,
 	stat_th : float = 60.0,
 	gpu : typing.Literal[0, 1, 2] = 0,
 	gpu_t : int = 2,
@@ -268,12 +267,11 @@ def RIFE_STD(
 	func_name = "RIFE_STD"
 	_validate_input_clip(func_name, input)
 	_validate_literal(func_name, "model", model, [23, 70, 72, 73])
-	_validate_bool(func_name, "t_tta", t_tta)
+	_validate_literal(func_name, "turbo", turbo, [0, 1, 2])
 	_validate_numeric(func_name, "fps_num", fps_num, min_val=2, int_only=True)
 	if not isinstance(fps_den, int) or fps_den >= fps_num or fps_num/fps_den <= 1 :
 		raise vs.Error(f"模块 {func_name} 的子参数 fps_den 的值无效")
 	_validate_literal(func_name, "sc_mode", sc_mode, [0, 1, 2])
-	_validate_bool(func_name, "skip", skip)
 	_validate_numeric(func_name, "stat_th", stat_th, min_val=0.0, max_val=60.0)
 	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
 	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
@@ -289,12 +287,22 @@ def RIFE_STD(
 	fmt_in = input.format.id
 	colorlv = getattr(input.get_frame(0).props, "_ColorRange", 0)
 
-	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
+	if turbo == 0 :
+		skip = False
+		s_tta = True
+	elif turbo == 1 :
+		skip = False
+		s_tta = False
+	elif turbo == 2 :
+		skip = True
+		s_tta = False
 	if model >= 63 :
-		t_tta = False
+		s_tta = False
+
+	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
 
 	cut1 = core.resize.Point(clip=cut0, format=vs.RGBS, matrix_in_s="709")
-	cut2 = core.rife.RIFE(clip=cut1, model=(model+1) if t_tta else model,
+	cut2 = core.rife.RIFE(clip=cut1, model=(model+1) if s_tta else model,
 		factor_num=fps_num, factor_den=fps_den, gpu_id=gpu, gpu_thread=gpu_t,
 		sc=True if sc_mode else False, skip=skip, skip_threshold=stat_th)
 	output = core.resize.Bilinear(clip=cut2, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
@@ -345,20 +353,20 @@ def RIFE_ORT_HUB(
 		cond_support = True
 
 	#ext_proc = True
-	#t_tta = False
+	#s_tta = False
 	if turbo :
 		ext_proc = False
-		t_tta = False
+		s_tta = False
 	else :
 		ext_proc = cond_support
-		t_tta = True
+		s_tta = True
 
 	plg_dir = os.path.dirname(core.ort.Version()["path"]).decode()
 	mdl_pname = "rife/" if ext_proc else "rife_v2/"
 	if model in [4251, 426, 4262] :
 		## https://github.com/AmusementClub/vs-mlrt/blob/2adfbab790eebe51c62c886400b0662570dfe3e9/scripts/vsmlrt.py#L1031-L1032
-		t_tta = False
-	if t_tta :
+		s_tta = False
+	if s_tta :
 		mdl_fname = ["rife_v4.6_ensemble"][[46].index(model)]
 	else :
 		mdl_fname = ["rife_v4.6", "rife_v4.25_lite", "rife_v4.26", "rife_v4.26_heavy"][[46, 4251, 426, 4262].index(model)]
@@ -403,13 +411,13 @@ def RIFE_ORT_HUB(
 		if w_tmp + h_tmp > 0 :
 			cut1 = core.std.AddBorders(clip=cut1, right=w_tmp, bottom=h_tmp)
 		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den),
-						  scale=scale_model, model=model, ensemble=t_tta,
+						  scale=scale_model, model=model, ensemble=s_tta,
 						  _implementation=1, video_player=True, backend=backend)
 		if w_tmp + h_tmp > 0 :
 			fin = core.std.Crop(clip=fin, right=w_tmp, bottom=h_tmp)
 	else :
 		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den),
-						  scale=scale_model, model=model, ensemble=t_tta,
+						  scale=scale_model, model=model, ensemble=s_tta,
 						  _implementation=2, video_player=True, backend=backend)
 
 	output = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
@@ -540,22 +548,22 @@ def RIFE_NV(
 	from ._external import vsmlrt
 
 	#ext_proc = True
-	#t_tta = False
+	#s_tta = False
 	if turbo == 0 :
 		ext_proc = True
-		t_tta = True
+		s_tta = True
 	elif turbo == 1 :
 		ext_proc = True
-		t_tta = False
+		s_tta = False
 	elif turbo == 2 :
 		ext_proc = False
-		t_tta = False
+		s_tta = False
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_pname = "rife/" if ext_proc else "rife_v2/"
 	if model in [4251, 426, 4262] : ## https://github.com/AmusementClub/vs-mlrt/blob/2adfbab790eebe51c62c886400b0662570dfe3e9/scripts/vsmlrt.py#L1031-L1032
-		t_tta = False
-	if t_tta :
+		s_tta = False
+	if s_tta :
 		mdl_fname = ["rife_v4.6_ensemble"][[46].index(model)]
 	else :
 		mdl_fname = ["rife_v4.6", "rife_v4.25_lite", "rife_v4.26", "rife_v4.26_heavy"][[46, 4251, 426, 4262].index(model)]
@@ -610,7 +618,7 @@ def RIFE_NV(
 	if ext_proc :
 		if w_tmp + h_tmp > 0 :
 			cut1 = core.std.AddBorders(clip=cut1, right=w_tmp, bottom=h_tmp)
-		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale_model, model=model, ensemble=t_tta, _implementation=1, video_player=True, backend=vsmlrt.BackendV2.TRT(
+		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale_model, model=model, ensemble=s_tta, _implementation=1, video_player=True, backend=vsmlrt.BackendV2.TRT(
 			num_streams=gpu_t, int8=int8_qnt, fp16=True, output_format=1,
 			workspace=None if ws_size < 128 else (ws_size if st_eng else ws_size * 2),
 			use_cuda_graph=True, use_cublas=False, use_cudnn=False,
@@ -621,7 +629,7 @@ def RIFE_NV(
 		if w_tmp + h_tmp > 0 :
 			fin = core.std.Crop(clip=fin, right=w_tmp, bottom=h_tmp)
 	else :
-		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale_model, model=model, ensemble=t_tta, _implementation=2, video_player=True, backend=vsmlrt.BackendV2.TRT(
+		fin = vsmlrt.RIFE(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale_model, model=model, ensemble=s_tta, _implementation=2, video_player=True, backend=vsmlrt.BackendV2.TRT(
 			num_streams=gpu_t, int8=int8_qnt, fp16=True, output_format=1,
 			workspace=None if ws_size < 128 else ws_size,
 			use_cuda_graph=True, use_cublas=False, use_cudnn=False,
