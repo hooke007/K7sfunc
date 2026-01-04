@@ -390,7 +390,7 @@ DRBA_NV(input=?, model=2, int8_qnt=False, turbo=1, fps_in=23.976, fps_num=2, fps
 > 所需依赖：[Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [RIFE(fork)](https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan) + [VMAF](https://vsdb.top/plugins/vmaf)
 
 ```python
-RIFE_STD(input=?, model=21, t_tta=False, fps_num=2, fps_den=1, sc_mode=1, skip=True, stat_th=60.0, gpu=0, gpu_t=2)
+RIFE_STD(input=?, model=21, turbo=2, fps_num=2, fps_den=1, sc_mode=1, stat_th=60.0, gpu=0, gpu_t=2)
 ```
 
 用 rife v4+ 补帧至任意倍率。
@@ -398,16 +398,15 @@ RIFE_STD(input=?, model=21, t_tta=False, fps_num=2, fps_den=1, sc_mode=1, skip=T
 ||||
 |:---|:---|:---|
 | <kbd>model</kbd> | `23`\|`70`\|`72`\|`73` | 使用的模型，分别对应4.6 4.25lite 4.26 4.26heavy |
-| <kbd>t_tta</kbd> | `True`\|`False` | 是否使用ensemble版模型 |
+| <kbd>turbo</kbd> | `0`\|`1`\|`2` | 使用内部提速技巧的等级， `0` 为禁用 |
 | <kbd>fps_num</kbd> | 整数 | <kbd>fps_num</kbd>/<kbd>fps_den</kbd> 的值即帧率倍数（计算结果可为浮点） |
 | <kbd>fps_den</kbd> | 整数 ||
 | <kbd>sc_mode</kbd> | `0`\|`1`\|`2` | 场景切换检测的模式， `0` 为禁用 |
-| <kbd>skip</kbd> | `True`\|`False` | 是否跳过静止帧，不对该类帧进行补偿计算 |
-| <kbd>stat_th</kbd> | 浮点 | 静止帧的检测阈值（最大 `60.0` ） |
+| <kbd>stat_th</kbd> | 浮点 | 静止帧的检测阈值（最大 `60.0` ），跳过相似帧（需要 `turbo` 为 `2` ） |
 | <kbd>gpu</kbd> | `0`\|`1`\|`2` | 指定显卡， `0` 为排序一号 |
 | <kbd>gpu_t</kbd> | 整数 | 指定显卡线程数（最大不要超过 `4` ） |
 
-性能需求 —— 模型4.26heavy > 4.26 > 2.25lite > 4.6 ，ensemble版模型 > 常规版。4.25 4.26系列 没有ensemble版模型
+性能需求 —— 模型4.26heavy > 4.26 > 2.25lite > 4.6
 
 >[!NOTE]  
 >使用 vsNV 包的用户：此功能所需的核心组件及所有模型均不被附带在包中，从 [👉此链接](https://github.com/hooke007/dotfiles/releases/tag/mpv_addones) 手动获取 `vs-k7sfunc.x_x_x.rife_std-core_models.7z`  
@@ -451,7 +450,7 @@ RIFE_DML(input=?, model=46, turbo=True, fps_in=23.976, fps_num=2, fps_den=1, sc_
 > plugins: [akarin](https://vsdb.top/plugins/akarin) + [Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
 
 ```python
-RIFE_NV(input=?, model=46, int8_qnt=False, turbo=True, fps_in=23.976, fps_num=2, fps_den=1, sc_mode=1, gpu=0, gpu_t=2, ws_size=0)
+RIFE_NV(input=?, model=46, int8_qnt=False, turbo=2, fps_in=23.976, fps_num=2, fps_den=1, sc_mode=1, gpu=0, gpu_t=2, ws_size=0)
 ```
 
 用 rife v4+ 补帧至固定数倍。
@@ -460,7 +459,7 @@ RIFE_NV(input=?, model=46, int8_qnt=False, turbo=True, fps_in=23.976, fps_num=2,
 |:---|:---|:---|
 | <kbd>model</kbd> | `46`\|`4251`\|`426`\|`4262` | 使用的模型，分别对应 4.6 4.25lite 4.26 4.26heavy |
 | <kbd>int8_qnt</kbd> | `True`\|`False` | 是否混合int8量化加速（速度提升的有限，同时质量退化严重） |
-| <kbd>turbo</kbd> | `True`\|`False` | 是否使用内部提速技巧 |
+| <kbd>turbo</kbd> | `0`\|`1`\|`2` | 使用内部提速技巧的等级， `0` 为禁用 |
 | <kbd>fps_in</kbd> | 浮点 | 指定输入源的帧率 |
 | <kbd>fps_num</kbd> | 整数 | <kbd>fps_num</kbd>/<kbd>fps_den</kbd> 的值即帧率倍数（计算结果可为浮点，但此时不适用VFR，因为会产生音画偏移） |
 | <kbd>fps_den</kbd> | 整数 ||
@@ -959,7 +958,7 @@ STAB_HQ(input=?)
 > plugins: [vsmlrt](https://github.com/AmusementClub/vs-mlrt) + [akarin](https://vsdb.top/plugins/akarin) + [vszip](https://github.com/dnjulek/vapoursynth-zip)
 
 ```python
-UAI_NV_DML(input=?, clamp=False, crc=False, model_pth="", fp16_qnt=True, gpu=0, gpu_t=2)
+UAI_DML(input=?, crc=False, model_pth="", fp16_qnt=True, gpu=0, gpu_t=2)
 ```
 
 基于dx12显卡加速的使用自定义的ONNX模型（仅支持放大类）
@@ -989,7 +988,7 @@ UAI_NV_DML(input=?, clamp=False, crc=False, model_pth="", fp16_qnt=True, gpu=0, 
 > plugins: [vsmlrt](https://github.com/AmusementClub/vs-mlrt) + [akarin](https://vsdb.top/plugins/akarin) + [vszip](https://github.com/dnjulek/vapoursynth-zip)
 
 ```python
-UAI_MIGX(input=?, clamp=False, crc=False, model_pth="", fp16_qnt=True, exh_tune=False, gpu=0, gpu_t=2)
+UAI_MIGX(input=?, crc=False, model_pth="", fp16_qnt=True, exh_tune=False, gpu=0, gpu_t=2)
 ```
 
 基于RDNA显卡加速的使用自定义的ONNX模型（仅支持放大类）
@@ -1019,7 +1018,7 @@ UAI_MIGX(input=?, clamp=False, crc=False, model_pth="", fp16_qnt=True, exh_tune=
 > plugins: [vsmlrt](https://github.com/AmusementClub/vs-mlrt) + [akarin](https://vsdb.top/plugins/akarin) + [vszip](https://github.com/dnjulek/vapoursynth-zip)
 
 ```python
-UAI_NV_TRT(input=?, clamp=False, crc=False, model_pth="", opt_lv=3, cuda_opt=[0, 0, 0], int8_qnt=False, fp16_qnt=False, gpu=0, gpu_t=2, st_eng=False, res_opt=None, res_max=None, ws_size=0)
+UAI_NV_TRT(input=?, crc=False, model_pth="", opt_lv=3, cuda_opt=[0, 0, 0], int8_qnt=False, fp16_qnt=False, gpu=0, gpu_t=2, st_eng=False, res_opt=None, res_max=None, ws_size=0)
 ```
 
 使用自定义的ONNX模型（仅支持放大类）
@@ -1053,7 +1052,7 @@ UAI_NV_TRT(input=?, clamp=False, crc=False, model_pth="", opt_lv=3, cuda_opt=[0,
 - 如果你不用 FMT_CTRL 模块限制分辨率，那么在此时的值应填你最常用的分辨率，比如你看1080p的视频最多，应填 `[1920, 1080]`
 
 >[!TIP]
->在使用动态引擎时， <kbd>res_opt</kbd> 限制的是待处理片段的最大分辨率，此分辨率同样并非源的分辨率，而是上一个滤镜输出的分辨率。  
+>在使用动态引擎时， <kbd>res_max</kbd> 限制的是待处理片段的最大分辨率，此分辨率同样并非源的分辨率，而是上一个滤镜输出的分辨率。  
 >分辨率给的越大，越需要更大的显存和更长的引擎构建时间，示例的1080p已经足够了。  
 >因此，不要填 `[3840, 2160]` 这种不切实际的值（这表示支持4k超到8k，等有RTX6090的话你再试试）。
 
