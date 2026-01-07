@@ -97,7 +97,7 @@ def DPIR_TRT_HUB(
 		cut1 = core.std.ShufflePlanes(clips=cut0, planes=0, colorfamily=vs.GRAY)
 		cut2 = core.resize.Point(clip=cut1, format=vs.GRAYH, matrix_in_s="709")
 	else :
-		cut2 = core.resize.Point(clip=cut0, format=vs.RGBH, matrix_in_s="709")
+		cut2 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
 
 	fin = vsmlrt.DPIR(clip=cut2, strength=nr_lv, model=model, backend=vsmlrt.BackendV2.TRT(
 		num_streams=gpu_t, force_fp16=True, output_format=1,
@@ -218,7 +218,7 @@ def BM3D_HUB(
 	elif plugin_name == "bm3dcuda_rtc" :
 		bm3d_plugin = core.bm3dcuda_rtc
 
-	cut0 = core.resize.Point(clip=input, format=vs.YUV444PS)
+	cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444PS)
 	ref = bm3d_plugin.BM3D(clip=cut0, sigma=nr_lv, block_step=bs_ref, device_id=gpu)
 	cut1 = bm3d_plugin.BM3D(clip=cut0, ref=ref, sigma=nr_lv, block_step=bs_out, device_id=gpu)
 	output = core.resize.Bilinear(clip=cut1, format=fmt_in)
@@ -330,7 +330,7 @@ def CCD_STD(
 			'+ + + + + + + + + + + + + + + a + Q@ /')
 		return ex_ccd
 
-	cut = core.resize.Point(clip=input, format=vs.RGBS, matrix_in_s="709")
+	cut = core.resize.Bilinear(clip=input, format=vs.RGBS, matrix_in_s="709")
 	fin = _ccd(src=cut, threshold=nr_lv)
 	output = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
 
@@ -364,7 +364,7 @@ def DFTT_HUB(
 	if fmt_in == vs.YUV444P16 :
 		cut0 = input
 	else :
-		cut0 = core.resize.Point(clip=input, format=vs.YUV444P16)
+		cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444P16)
 
 	backend = backend_param(dfttest2)
 	cut1 = dfttest2.DFTTest2(clip=cut0, planes=plane, sigma=nr_lv,

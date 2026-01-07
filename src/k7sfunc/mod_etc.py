@@ -134,7 +134,7 @@ def DEBAND_STD(
 	if fmt_in == vs.YUV444P16 :
 		cut0 = input
 	else :
-		cut0 = core.resize.Point(clip=input, format=vs.YUV444P16)
+		cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444P16)
 	output = core.neo_f3kdb.Deband(clip=cut0, range=bd_range, y=bdy_rth,
 		cb=bdc_rth, cr=bdc_rth, grainy=grainy, grainc=grainc, sample_mode=spl_m,
 		dynamic_grain=grain_dy, mt=True, keep_tv_range=True if color_lv==1 else False,

@@ -68,7 +68,7 @@ def ACNET_STD(
 			cut0 = core.resize.Bilinear(clip=input, format=vs.YUV420P8)
 	else :
 		if fmt_in != vs.YUV444P16 :
-			cut0 = core.resize.Point(clip=input, format=vs.YUV444P16)
+			cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444P16)
 
 	output = core.anime4kcpp.ACUpscale(clip=cut0, factor=2.0,
 									   processor="opencl" if gpu_m==1 else "cuda",
@@ -122,7 +122,7 @@ def ARTCNN_NV(
 	if not st_eng and (((w_in > 2048) or (h_in > 1080)) or ((w_in < 64) or (h_in < 64))) :
 		raise Exception("源分辨率不属于动态引擎支持的范围，已临时中止。")
 
-	cut0 = core.resize.Point(clip=input, format=vs.YUV444PH)
+	cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444PH)
 
 	cut0_y = core.std.ShufflePlanes(clips=cut0, planes=0, colorfamily=vs.GRAY)
 	cut1_y = vsmlrt.ArtCNN(clip=cut0_y, model=model, backend=vsmlrt.BackendV2.TRT(
@@ -185,7 +185,7 @@ def CUGAN_NV(
 	if not st_eng and (((w_in > 2048) or (h_in > 1080)) or ((w_in < 64) or (h_in < 64))) :
 		raise Exception("源分辨率不属于动态引擎支持的范围，已临时中止。")
 
-	cut1 = core.resize.Point(clip=input, format=vs.RGBH, matrix_in_s="709")
+	cut1 = core.resize.Bilinear(clip=input, format=vs.RGBH, matrix_in_s="709")
 	cut2 = vsmlrt.CUGAN(clip=cut1, noise=nr_lv, scale=2, alpha=sharp_lv, version=2, backend=vsmlrt.BackendV2.TRT(
 		num_streams=gpu_t, force_fp16=True, output_format=1,
 		workspace=None if ws_size < 128 else (ws_size if st_eng else ws_size * 2),
@@ -230,13 +230,13 @@ def EDI_US_STD(
 	if ext_proc :
 		fmt_in = input.format.id
 		if fmt_in in [vs.YUV410P8, vs.YUV420P8, vs.YUV420P10] :
-			clip = core.resize.Point(clip=input, format=vs.YUV420P16)
+			clip = core.resize.Bilinear(clip=input, format=vs.YUV420P16)
 		elif fmt_in in [vs.YUV411P8, vs.YUV422P8, vs.YUV422P10] :
-			clip = core.resize.Point(clip=input, format=vs.YUV422P16)
+			clip = core.resize.Bilinear(clip=input, format=vs.YUV422P16)
 		elif fmt_in == vs.YUV444P16 :
 			clip = input
 		else :
-			clip = core.resize.Point(clip=input, format=vs.YUV444P16)
+			clip = core.resize.Bilinear(clip=input, format=vs.YUV444P16)
 	else :
 		clip = input
 

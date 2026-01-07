@@ -79,7 +79,7 @@ def UAI_ORT_HUB(
 		output = core.std.ShufflePlanes([infer, clip_uv], [0, 1, 2], vs.YUV)
 		output = core.resize.Bilinear(clip=output, format=fmt_in, range=1 if colorlv==0 else None)
 	else :
-		clip = core.resize.Point(clip=input, format=rgb_fmt, matrix_in_s="709")
+		clip = core.resize.Bilinear(clip=input, format=rgb_fmt, matrix_in_s="709")
 		be_param = backend_param(fp16_qnt)
 		infer = vsmlrt.inference(clips=clip, network_path=mdl_pth, backend=be_param)
 		if crc :
@@ -210,7 +210,7 @@ def UAI_MIGX(
 		output = core.std.ShufflePlanes([infer, clip_uv], [0, 1, 2], vs.YUV)
 		output = core.resize.Bilinear(clip=output, format=fmt_in, range=1 if colorlv==0 else None)
 	else :
-		clip = core.resize.Point(clip=input, format=rgb_fmt, matrix_in_s="709")
+		clip = core.resize.Bilinear(clip=input, format=rgb_fmt, matrix_in_s="709")
 		be_param = vsmlrt.BackendV2.MIGX(
 			fp16=fp16_qnt, exhaustive_tune=exh_tune, opt_shapes=[clip.width, clip.height],
 			device_id=gpu, num_streams=gpu_t, short_path=True)
@@ -307,7 +307,7 @@ def UAI_NV_TRT(
 		output = core.std.ShufflePlanes([infer, clip_uv], [0, 1, 2], vs.YUV)
 		output = core.resize.Bilinear(clip=output, format=fmt_in, range=1 if colorlv==0 else None)
 	else :
-		clip = core.resize.Point(clip=input, format=rgb_fmt, matrix_in_s="709")
+		clip = core.resize.Bilinear(clip=input, format=rgb_fmt, matrix_in_s="709")
 		infer = vsmlrt.inference(clips=clip, network_path=mdl_pth, backend=be_param)
 		if crc :
 			infer = DCF(input=infer, ref=clip)

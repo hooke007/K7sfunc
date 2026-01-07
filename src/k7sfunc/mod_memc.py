@@ -220,7 +220,7 @@ def DRBA_NV(
 
 	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
 
-	cut1 = core.resize.Point(clip=cut0, format=vs.RGBH, matrix_in_s="709")
+	cut1 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
 	if model_ap :
 		fin = vsmlrt.DRBA(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale, ap=model_ap, model=model, video_player=True, backend=vsmlrt.BackendV2.TRT(
 			num_streams=gpu_t, int8=int8_qnt, fp16=True, output_format=1,
@@ -301,7 +301,7 @@ def RIFE_STD(
 
 	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
 
-	cut1 = core.resize.Point(clip=cut0, format=vs.RGBS, matrix_in_s="709")
+	cut1 = core.resize.Bilinear(clip=cut0, format=vs.RGBS, matrix_in_s="709")
 	cut2 = core.rife.RIFE(clip=cut1, model=(model+1) if s_tta else model,
 		factor_num=fps_num, factor_den=fps_den, gpu_id=gpu, gpu_thread=gpu_t,
 		sc=True if sc_mode else False, skip=skip, skip_threshold=stat_th)
@@ -404,7 +404,7 @@ def RIFE_ORT_HUB(
 	h_tmp = math.ceil(h_in / tile_size) * tile_size - h_in
 
 	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
-	cut1 = core.resize.Point(clip=cut0, format=vs.RGBS, matrix_in_s="709")
+	cut1 = core.resize.Bilinear(clip=cut0, format=vs.RGBS, matrix_in_s="709")
 
 	backend = backend_param(ext_proc)
 	if ext_proc :
@@ -614,7 +614,7 @@ def RIFE_NV(
 
 	cut0 = SCENE_DETECT(input=input, sc_mode=sc_mode)
 
-	cut1 = core.resize.Point(clip=cut0, format=vs.RGBH, matrix_in_s="709")
+	cut1 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
 	if ext_proc :
 		if w_tmp + h_tmp > 0 :
 			cut1 = core.std.AddBorders(clip=cut1, right=w_tmp, bottom=h_tmp)

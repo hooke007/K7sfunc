@@ -43,7 +43,7 @@ def COLOR_P3W_FIX(
 
 	colorlv = input.get_frame(0).props._ColorRange
 
-	cut = core.resize.Point(clip=input, format=vs.RGB48, matrix_in_s="709")
+	cut = core.resize.Bilinear(clip=input, format=vs.RGB48, matrix_in_s="709")
 	if linear :
 		cut = core.fmtc.transfer(clip=cut, transs="1886", transd="linear")
 	cut = core.fmtc.primaries(clip=cut, prims="p3d65", primd="p3dci", wconv=True)
@@ -187,7 +187,7 @@ def LAYER_HIGH(
 	if fmt_in == vs.YUV444P16 :
 		cut0 = input
 	else :
-		cut0 = core.resize.Point(clip=input, format=vs.YUV444P16)
+		cut0 = core.resize.Bilinear(clip=input, format=vs.YUV444P16)
 	if blur_m == 0 :
 		output_blur = cut0
 		output_diff = None
@@ -263,7 +263,7 @@ def RANGE_CHANGE(
 	elif fmt_in in [vs.YUV420P16, vs.YUV422P16, vs.YUV444P16] :
 		lv_val_pre = 2
 	else :
-		cut0 = core.resize.Point(clip=cut0, format=vs.YUV444P16)
+		cut0 = core.resize.Bilinear(clip=cut0, format=vs.YUV444P16)
 		lv_val_pre = 2
 
 	lv_val1 = [16, 64, 4096][lv_val_pre]
