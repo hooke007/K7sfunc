@@ -941,6 +941,7 @@ def DRBAMerge(
     mask: vs.VideoNode,
     scale: float = 1.0,
     ap: bool = False,
+    sp_layer: bool = False,
     tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
@@ -1047,6 +1048,46 @@ def DRBAMerge(
         backend=backend,
         trt_opt_shapes=(tile_w, tile_h)
     )
+
+    # FP32 precision constraints for warp/grid_sample coordinate calculations to avoid FP16 quantization artifacts
+    if sp_layer and isinstance(backend, Backend.TRT):
+        if backend.force_fp16:
+            backend.force_fp16 = False
+            backend.fp16 = True
+
+        # possible layer names for coordinate calculations
+        # GridSample operations
+        gs_layers = '/GridSample:fp32,' + ','.join([f'/GridSample_{i}:fp32' for i in range(1, 18)])
+        # Div layers for coordinate normalization
+        div_layers = '/Div:fp32,' + ','.join([f'/Div_{i}:fp32' for i in range(1, 50)])
+        # Sub layers for coordinate calculations
+        sub_layers = '/Sub:fp32,' + ','.join([f'/Sub_{i}:fp32' for i in range(1, 56)])
+        # Mul layers for coordinate scaling (all in coordinate path)
+        mul_layers = '/Mul:fp32,' + ','.join([f'/Mul_{i}:fp32' for i in range(1, 62)])
+        # Add layers for coordinate offset
+        add_layers = '/Add:fp32,' + ','.join([f'/Add_{i}:fp32' for i in range(1, 52)])
+        # Cast layers for type conversions in coordinate path
+        cast_layers = '/Cast:fp32,' + ','.join([f'/Cast_{i}:fp32' for i in range(1, 76)])
+        # Floor layers for autopad padding calculations
+        floor_layers = '/Floor:fp32,' + ','.join([f'/Floor_{i}:fp32' for i in range(1, 4)])
+        # Range layers for arange operations
+        range_layers = '/Range:fp32,' + ','.join([f'/Range_{i}:fp32' for i in range(1, 6)])
+
+        backend.custom_args.extend([
+            "--precisionConstraints=obey",
+            "--layerPrecisions=" + ','.join([
+                gs_layers,
+                div_layers,
+                sub_layers,
+                mul_layers,
+                add_layers,
+                cast_layers,
+                floor_layers,
+                range_layers,
+                # All broadcast operations (like RIFE)
+                "ONNXTRT_Broadcast_*:fp32"
+            ])
+        ])
 
     return inference_with_fallback(
         clips=clips, network_path=network_path,
@@ -1274,6 +1315,7 @@ def DRBA(
     multi: typing.Union[int, Fraction] = 2,
     scale: float = 1.0,
     ap: bool = False,
+    sp_layer: bool = False,
     tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     overlap: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
@@ -1340,7 +1382,7 @@ def DRBA(
 
         output0 = DRBAMerge(
             clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=timepoint,
-            scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+            scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
             model=model, backend=backend
         )
 
@@ -1415,7 +1457,7 @@ def DRBA(
 
             output0 = DRBAMerge(
                 clip0=img0_clip, clip1=img1_clip, clip2=img2_clip, clip3=img3_clip, mask=tp_clip,
-                scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
                 model=model, backend=backend
             )
 
@@ -1481,7 +1523,7 @@ def DRBA(
 
             output0 = DRBAMerge(
                 clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=tp_clip,
-                scale=scale, ap=ap, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
                 model=model, backend=backend
             )
 

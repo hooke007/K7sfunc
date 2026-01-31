@@ -222,7 +222,10 @@ def DRBA_NV(
 
 	cut1 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
 	if model_ap :
-		fin = vsmlrt.DRBA(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale, ap=model_ap, model=model, video_player=True, backend=vsmlrt.BackendV2.TRT(
+		fin = vsmlrt.DRBA(clip=cut1, multi=fractions.Fraction(fps_num, fps_den),
+		                  scale=scale, ap=model_ap, sp_layer=True, model=model,
+		                  video_player=True, backend=vsmlrt.BackendV2.TRT(
+
 			num_streams=gpu_t, int8=int8_qnt, fp16=True, output_format=1,
 			workspace=None if ws_size < 128 else ws_size,
 			use_cuda_graph=True, use_cublas=False, use_cudnn=False,
@@ -232,7 +235,10 @@ def DRBA_NV(
 	else :
 		if w_tmp + h_tmp > 0 :
 			cut1 = core.std.AddBorders(clip=cut1, right=w_tmp, bottom=h_tmp)
-		fin = vsmlrt.DRBA(clip=cut1, multi=fractions.Fraction(fps_num, fps_den), scale=scale, ap=model_ap, model=model, video_player=True, backend=vsmlrt.BackendV2.TRT(
+		fin = vsmlrt.DRBA(clip=cut1, multi=fractions.Fraction(fps_num, fps_den),
+		                  scale=scale, ap=model_ap, sp_layer=True, model=model,
+		                  video_player=True, backend=vsmlrt.BackendV2.TRT(
+
 			num_streams=gpu_t, int8=int8_qnt, fp16=True, output_format=1,
 			workspace=None if ws_size < 128 else (ws_size if st_eng else ws_size * 2),
 			use_cuda_graph=True, use_cublas=False, use_cudnn=False,
