@@ -1,5 +1,5 @@
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 from ._internal import vs_t_dft, LooseVersion
 

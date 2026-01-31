@@ -7,7 +7,7 @@ _与 mpv-lazy 预捆绑的版本说明发布在[此处](https://github.com/hooke
 > Mac配VS环境和Linux类似，因此不提供一条龙速装服务，仅提供参数和依赖说明；
 > 仅考虑Apple silicon芯片的可用性，[M2pro的测试结果参考](https://github.com/hooke007/mpv_PlayKit/pull/632)
 
-当前文档匹配的版本 **1.2.0**
+当前文档匹配的版本 **1.2.1**
 
 <br>
 
