@@ -1,6 +1,6 @@
 ### SRC https://github.com/AmusementClub/vs-mlrt/blob/master/scripts/vsmlrt.py
 
-__version__ = "3.22.36"
+__version__ = "3.22.38"
 
 __all__ = [
     "Backend", "BackendV2",
@@ -262,10 +262,10 @@ class Backend:
         fast_math: bool = True
         exhaustive_tune: bool = False
         num_streams: int = 1
-
         short_path: typing.Optional[bool] = None # True on Windows by default, False otherwise
         custom_env: typing.Dict[str, str] = field(default_factory=lambda: {})
         custom_args: typing.List[str] = field(default_factory=lambda: [])
+        bf16: bool = False
 
         # internal backend attributes
         supports_onnx_serialization: bool = False
@@ -1557,6 +1557,7 @@ class ArtCNNModel(enum.IntEnum):
     ArtCNN_C4F32_DN = 14
     ArtCNN_R8F64_JPEG420 = 15
     ArtCNN_R8F64_JPEG444 = 16
+    ArtCNN_R8F64_Chroma_DN = 17
 
 
 def ArtCNN(
@@ -1585,6 +1586,7 @@ def ArtCNN(
         ArtCNNModel.ArtCNN_C16F64_Chroma,
         ArtCNNModel.ArtCNN_R8F64_Chroma,
         ArtCNNModel.ArtCNN_R16F96_Chroma,
+        ArtCNNModel.ArtCNN_R8F64_Chroma_DN,
     ):
         if clip.format.color_family != vs.YUV:
             raise ValueError(f'{func_name}: "clip" must be of YUV color family')
@@ -1640,7 +1642,8 @@ def ArtCNN(
         ArtCNNModel.ArtCNN_C4F32_Chroma,
         ArtCNNModel.ArtCNN_C16F64_Chroma,
         ArtCNNModel.ArtCNN_R8F64_Chroma,
-        ArtCNNModel.ArtCNN_R16F96_Chroma
+        ArtCNNModel.ArtCNN_R16F96_Chroma,
+        ArtCNNModel.ArtCNN_R8F64_Chroma_DN,
     ):
         clip = _expr(clip, ["", "x 0.5 +"])
 
@@ -2031,7 +2034,8 @@ def get_mxr_path(
     fast_math: bool,
     exhaustive_tune: bool,
     device_id: int,
-    short_path: typing.Optional[bool]
+    short_path: typing.Optional[bool],
+    bf16: bool,
 ) -> str:
 
     with open(network_path, "rb") as file:
@@ -2050,6 +2054,7 @@ def get_mxr_path(
     identity = (
         shape_str +
         ("_fp16" if fp16 else "") +
+        ("_bf16" if bf16 else "") +
         ("_fast" if fast_math else "") +
         ("_exhaustive" if exhaustive_tune else "") +
         f"_migx-{migx_version}" +
@@ -2075,7 +2080,8 @@ def migraphx_driver(
     input_name: str = "input",
     short_path: typing.Optional[bool] = None,
     custom_env: typing.Dict[str, str] = {},
-    custom_args: typing.List[str] = []
+    custom_args: typing.List[str] = [],
+    bf16: bool = False,
 ) -> str:
 
     if isinstance(opt_shapes, int):
@@ -2088,7 +2094,8 @@ def migraphx_driver(
         fast_math=fast_math,
         exhaustive_tune=exhaustive_tune,
         device_id=device_id,
-        short_path=short_path
+        short_path=short_path,
+        bf16=bf16,
     )
 
     if os.access(mxr_path, mode=os.R_OK) and os.path.getsize(mxr_path) >= 1024:
@@ -2139,6 +2146,10 @@ def migraphx_driver(
 
     if exhaustive_tune:
         args.append("--exhaustive-tune")
+
+    # bf16 support is introduced in ROCm 7.2.0, but the version info from the vsmigx library may not be reliable.
+    if bf16:
+        args.append("--bf16")
 
     args.extend(custom_args)
 
@@ -2734,7 +2745,8 @@ def _inference(
             input_name=input_name,
             short_path=backend.short_path,
             custom_env=backend.custom_env,
-            custom_args=backend.custom_args
+            custom_args=backend.custom_args,
+            bf16=backend.bf16,
         )
         ret = core.migx.Model(
             clips, mxr_path,
