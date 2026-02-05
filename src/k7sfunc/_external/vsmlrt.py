@@ -941,6 +941,7 @@ def DRBAMerge(
     mask: vs.VideoNode,
     scale: float = 1.0,
     ap: bool = False,
+    halfm: bool = False,
     sp_layer: bool = False,
     tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
@@ -952,9 +953,8 @@ def DRBAMerge(
 
     Args:
         scale: flow scale (0.5 or 1.0)
-        ap: Use auto-padding variant (no size constraints)
-        model: DRBA model version
-        backend: Inference backend
+        ap: Use auto-padding variant
+        halfm: Use half precision variant
     """
 
     func_name = "vsmlrt.DRBAMerge"
@@ -1017,6 +1017,8 @@ def DRBAMerge(
         model_name += "_scale"
     if ap:
         model_name += "_ap"
+    if halfm:
+        model_name += "_fp16"
     model_name += ".onnx"
 
     network_path = os.path.join(
@@ -1051,7 +1053,7 @@ def DRBAMerge(
 
     # FP32 precision constraints for warp/grid_sample coordinate calculations to avoid FP16 quantization artifacts
     if sp_layer and isinstance(backend, Backend.TRT):
-        if backend.force_fp16:
+        if backend.force_fp16 or backend.fp16:
             backend.force_fp16 = False
             backend.fp16 = True
 
@@ -1315,6 +1317,7 @@ def DRBA(
     multi: typing.Union[int, Fraction] = 2,
     scale: float = 1.0,
     ap: bool = False,
+    halfm: bool = False,
     sp_layer: bool = False,
     tiles: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
     tilesize: typing.Optional[typing.Union[int, typing.Tuple[int, int]]] = None,
@@ -1329,8 +1332,7 @@ def DRBA(
         multi: Multiple of the frame counts (2 for 2x, etc.)
         scale: flow scale (0.5 or 1.0)
         ap: Use auto-padding variant
-        model: DRBA model version
-        backend: Inference backend
+        halfm: Use half precision variant
     """
 
     func_name = "vsmlrt.DRBA"
@@ -1382,7 +1384,7 @@ def DRBA(
 
         output0 = DRBAMerge(
             clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=timepoint,
-            scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
+            scale=scale, ap=ap, halfm=halfm, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
             model=model, backend=backend
         )
 
@@ -1457,7 +1459,7 @@ def DRBA(
 
             output0 = DRBAMerge(
                 clip0=img0_clip, clip1=img1_clip, clip2=img2_clip, clip3=img3_clip, mask=tp_clip,
-                scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                scale=scale, ap=ap, halfm=halfm, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
                 model=model, backend=backend
             )
 
@@ -1523,7 +1525,7 @@ def DRBA(
 
             output0 = DRBAMerge(
                 clip0=img0, clip1=img1, clip2=img2, clip3=img3, mask=tp_clip,
-                scale=scale, ap=ap, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
+                scale=scale, ap=ap, halfm=halfm, sp_layer=sp_layer, tiles=tiles, tilesize=tilesize, overlap=overlap,
                 model=model, backend=backend
             )
 
