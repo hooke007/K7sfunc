@@ -175,15 +175,28 @@ def DRBA_HUB(
 
 	model_scale = False
 	model_ap = False
+	model_half = False
 	if turbo :
 		model_ap = True
 		if turbo == 2 :
 			model_scale = True
 
-	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
+	if backend_type == "dml" :
+		plg_dir = os.path.dirname(core.ort.Version()["path"]).decode()
+		model_half = True
+	else :
+		plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_pname = "drba/"
-	mdl_fname = ["distilDRBA_v1", "distilDRBA_v2_lite"][[1, 2].index(model)] ## 暂只检查核心模型
-	mdl_pth = plg_dir + "/models/" + mdl_pname + mdl_fname + ".onnx"
+	mdl_fname = ["distilDRBA_v1", "distilDRBA_v2_lite"][[1, 2].index(model)]
+	mdl_var_parts = []
+	if model_scale:
+		mdl_var_parts.append("_scale")
+	if model_ap:
+		mdl_var_parts.append("_ap")
+	if model_half:
+		mdl_var_parts.append("_fp16")
+	mdl_var = "".join(mdl_var_parts)
+	mdl_pth = plg_dir + "/models/" + mdl_pname + mdl_fname + mdl_var + ".onnx"
 	if not os.path.exists(mdl_pth) :
 		raise vs.Error(f"模块 {func_name} 所请求的模型缺失")
 
