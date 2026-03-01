@@ -1,28 +1,17 @@
 ##################################################
-### K7sfunc 的可选附属脚本
+### QTGMC
 ##################################################
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 __all__ = [ "QTGMC_obs", "QTGMCv2"]
 
+import vapoursynth as vs
+from vapoursynth import core
 
 import functools
 import math
 import typing
-import vapoursynth as vs
-
-core = vs.core
-
-#-------------------------------------------------------------------#
-#                                                                   #
-#                    QTGMC 3.33, by Vit, 2012                       #
-#                                                                   #
-#   A high quality deinterlacer using motion-compensated temporal   #
-#  smoothing, with a range of features for quality and convenience  #
-#          Originally based on TempGaussMC_beta2 by Didée           #
-#                                                                   #
-#-------------------------------------------------------------------#
 
 def QTGMC_obs_Scale(value, peak):
 	def _cround(x):
@@ -37,6 +26,15 @@ def QTGMC_obs_Weave(clip, tff):
 	return clip.std.DoubleWeave(tff=tff)[::2]
 
 ## MOD HAvsFunc (1d114642a453b17ea4dc08c5415c20cfee222e1a)
+#-------------------------------------------------------------------#
+#                                                                   #
+#                    QTGMC 3.33, by Vit, 2012                       #
+#                                                                   #
+#   A high quality deinterlacer using motion-compensated temporal   #
+#  smoothing, with a range of features for quality and convenience  #
+#          Originally based on TempGaussMC_beta2 by Didée           #
+#                                                                   #
+#-------------------------------------------------------------------#
 def QTGMC_obs(
 		Input, Preset='Slower', TR0=None, TR1=None, TR2=None, Rep0=None, Rep1=0, Rep2=None, EdiMode=None, RepChroma=True, NNSize=None, NNeurons=None, EdiQual=1, EdiMaxD=None, ChromaEdi='',
 		EdiExt=None, Sharpness=None, SMode=None, SLMode=None, SLRad=None, SOvs=0, SVThin=0.0, Sbb=None, SrchClipPP=None, SubPel=None, SubPelInterp=2, BlockSize=None, Overlap=None, Search=None,
@@ -1036,14 +1034,13 @@ def QTGMCv2(
 	src_type : typing.Literal[0, 1, 2, 3] = 0,
 	deint_den : typing.Literal[1, 2] = 1,
 	tff : typing.Literal[0, 1, 2] = 0,
+	video_player : bool = False,
 	cpu : bool = True,
 	gpu : typing.Literal[-1, 0, 1, 2] = -1,
 ) -> vs.VideoNode:
 
-	##TODO: 依赖检查
-
 	if not tff :
-		field_src = getattr(input.get_frame(0).props, "_FieldBased", 1)
+		field_src = getattr(input.get_frame(0).props, "_FieldBased", 0)
 		if field_src == 0 :
 			field_order = 1
 		else :
@@ -1055,11 +1052,14 @@ def QTGMCv2(
 	if src_type == 0 :
 		fps_out = fps_out * 2
 
-	src = core.std.AssumeFPS(clip=input, fpsnum=int(fps_in * 1e6), fpsden=1e6)
+	clip = input
+	if video_player :
+		clip = core.std.AssumeFPS(clip=clip, fpsnum=int(fps_in * 1e6), fpsden=1e6)
 
-	clip = QTGMC_obs(Input=src, Preset=preset_val, InputType=src_type, FPSDivisor=deint_den, TFF=True if field_order==1 else False, opencl=not cpu, device=gpu)
+	output = QTGMC_obs(Input=clip, Preset=preset_val, InputType=src_type, FPSDivisor=deint_den, TFF=True if field_order==1 else False, opencl=not cpu, device=gpu)
 
-	output = core.std.AssumeFPS(clip=clip, fpsnum=int(fps_out), fpsden=1e6)
+	if video_player :
+		output = core.std.AssumeFPS(clip=output, fpsnum=int(fps_out), fpsden=1e6)
 
 	return output
 

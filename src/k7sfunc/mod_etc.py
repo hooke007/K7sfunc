@@ -254,7 +254,7 @@ def DEINT_EX(
 		input = core.std.Crop(clip=input, bottom=1)
 	output = qtgmc.QTGMCv2(input=input, fps_in=fps_in, deint_lv=deint_lv,
 						   src_type=src_type, deint_den=deint_den, tff=tff,
-						   cpu=cpu, gpu=gpu)
+						   video_player=True, cpu=cpu, gpu=gpu)
 
 	return output
 
