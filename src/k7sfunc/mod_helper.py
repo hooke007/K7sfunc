@@ -25,6 +25,7 @@ __all__ = [
 	"ONNX_ANZ",
 	"PIX_CLP",
 	"SCENE_DETECT",
+	"SCDetect2",
 ]
 
 ##################################################
@@ -391,6 +392,148 @@ def PIX_CLP(
 ## 场景检测
 ##################################################
 
+def PROP_HISTDIFF(
+	input : vs.VideoNode,
+	sample_step : typing.Literal[1, 2] = 1,
+) -> vs.VideoNode :
+	"""
+	为每帧添加直方图差异属性
+	"""
+
+	import numpy as np
+
+	clip = input
+	if sample_step not in (1, 2) :
+		raise ValueError("PROP_HISTDIFF: sample_step must be one of (1, 2)")
+	if clip.format.color_family != vs.GRAY :
+		clip = clip.std.ShufflePlanes(planes=0, colorfamily=vs.GRAY)
+	if clip.format.bits_per_sample != 8 or clip.format.sample_type != vs.INTEGER :
+		clip = clip.resize.Point(format=vs.GRAY8)
+
+	clip_next = clip.std.Trim(first=1) + clip.std.Trim(first=clip.num_frames - 1)
+
+	def _calc_hist_diff(n, f) :
+		fout = f[0].copy()
+		curr_data = np.asarray(f[0][0])
+		next_data = np.asarray(f[1][0])
+
+		if sample_step > 1 :
+			curr_flat = curr_data[::sample_step, ::sample_step].ravel()
+			next_flat = next_data[::sample_step, ::sample_step].ravel()
+		else :
+			curr_flat = curr_data.ravel()
+			next_flat = next_data.ravel()
+
+		hist1 = np.bincount(curr_flat, minlength=256)
+		hist2 = np.bincount(next_flat, minlength=256)
+		norm = float(curr_flat.size) * 2.0
+		diff = float(np.abs(hist1 - hist2).sum()) / norm if norm else 0.0
+
+		fout.props['SCPlaneStatsDiff'] = float(diff)
+		return fout
+
+	return clip.std.ModifyFrame(clips=[clip, clip_next], selector=_calc_hist_diff)
+
+def SCDetect2(
+	input : vs.VideoNode,
+	algo : int = 1,
+	threshold : float = 0.1,
+	max_size : int = 2304000,
+	hist_sstep : int = 1,
+	) -> vs.VideoNode :
+	"""
+	场景切换检测++
+
+	参数:
+		algo : 检测算法
+			1 MAE （默认，速度最快） 2 边缘MAE （对亮度变化不敏感）
+			3 直方图 （对整体亮度变化不敏感） 4 直方图&边缘MAE
+		threshold : 场景切换阈值 (0.0-1.0) 。建议值范围：
+			algo=1: 0.10 ... 0.15
+			algo=2: 0.05 ... 0.10
+			algo=3: 0.20 ... 0.40
+			algo=4: 0.10 ... 0.15
+		max_size : 最大帧面积阈值，默认 2304000 （不建议低于 518400 ），超过则预降采样， 0 则禁用
+		hist_sstep : 直方图采样步长，默认 1 （全采样）
+	"""
+
+	if threshold < 0.0 or threshold > 1.0 :
+		raise ValueError("SCDetect2: threshold must be between 0 and 1")
+	if input.num_frames == 1 :
+		raise ValueError("SCDetect2: input must have more than one frame")
+	if algo not in (1, 2, 3, 4) :
+		raise ValueError("SCDetect2: unsupported algo value")
+	if hist_sstep not in (1, 2) :
+		raise ValueError("SCDetect2: hist_sstep must be one of (1, 2)")
+
+	clip = input
+	clip_orig = clip
+
+	if clip.format.color_family == vs.RGB :
+		clip = clip.resize.Point(format=vs.GRAY8 if clip.format.bits_per_sample == 8 else vs.GRAY16,
+								 matrix_s="709")
+
+	if max_size > 0 :
+		size = clip.width * clip.height
+		if size > max_size :
+			scale_factor = (max_size / size) ** 0.5
+			width_n = int(clip.width * scale_factor)
+			height_n = int(clip.height * scale_factor)
+			width_n = width_n - (width_n % 2)
+			height_n = height_n - (height_n % 2)
+			clip = clip.resize.Bilinear(width_n, height_n)
+
+	if algo == 1 :
+		trimmed = clip.std.Trim(first=1)
+		compared = clip.std.PlaneStats(trimmed, prop="SCPlaneStats", plane=0)
+
+	elif algo == 2 :
+		clip = clip.std.Sobel()
+		trimmed = clip.std.Trim(first=1)
+		compared = clip.std.PlaneStats(trimmed, prop="SCPlaneStats", plane=0)
+
+	elif algo == 3 :
+		compared = PROP_HISTDIFF(clip, sample_step=hist_sstep)
+
+	elif algo == 4 :
+		hist_compared = PROP_HISTDIFF(clip, sample_step=hist_sstep)
+		edge_clip = clip.std.Sobel()
+		trimmed = edge_clip.std.Trim(first=1)
+		edge_compared = edge_clip.std.PlaneStats(trimmed, prop="SCPlaneStats", plane=0)
+		hist_compared_prev = hist_compared.std.DuplicateFrames([0])[:-1]
+		edge_compared_prev = edge_compared.std.DuplicateFrames([0])[:-1]
+
+		def _set_scene_change_combined(n, f) :
+			fout = f[0].copy()
+			# f[1], f[2]: hist_compared 的前一帧和当前帧
+			# f[3], f[4]: edge_compared 的前一帧和当前帧
+			hist_prev = f[1].props.get('SCPlaneStatsDiff', 0.0)
+			hist_next = f[2].props.get('SCPlaneStatsDiff', 0.0)
+			edge_prev = f[3].props.get('SCPlaneStatsDiff', 0.0)
+			edge_next = f[4].props.get('SCPlaneStatsDiff', 0.0)
+			fout.props['_SceneChangePrev'] = int((hist_prev > threshold) and (edge_prev > threshold))
+			fout.props['_SceneChangeNext'] = int((hist_next > threshold) and (edge_next > threshold))
+			return fout
+
+		return clip_orig.std.ModifyFrame(
+			clips=[clip_orig, hist_compared_prev, hist_compared, edge_compared_prev, edge_compared],
+			selector=_set_scene_change_combined
+		)
+
+	# algo 1/2/3 共用阈值判定与属性写入逻辑
+	compared_prev = compared.std.DuplicateFrames([0])[:-1]
+
+	def _set_scene_change(n, f) :
+		fout = f[0].copy()
+		prev_diff = f[1].props.get('SCPlaneStatsDiff', 0.0)
+		next_diff = f[2].props.get('SCPlaneStatsDiff', 0.0)
+		fout.props['_SceneChangePrev'] = int(prev_diff > threshold)
+		fout.props['_SceneChangeNext'] = int(next_diff > threshold)
+		return fout
+
+	return clip_orig.std.ModifyFrame(clips=[clip_orig, compared_prev, compared],
+									 selector=_set_scene_change)
+
 def SCENE_DETECT(
 	input : vs.VideoNode,
 	sc_mode : typing.Literal[0, 1, 2] = 1,
@@ -402,7 +545,7 @@ def SCENE_DETECT(
 	if sc_mode == 0 :
 		output = input
 	elif sc_mode == 1 :
-		output = core.misc.SCDetect(clip=input, threshold=thr)
+		output = SCDetect2(input, threshold=thr)
 	elif sc_mode == 2 :
 		sup = core.mv.Super(clip=input, pel=1)
 		vec = core.mv.Analyse(super=sup, isb=True)

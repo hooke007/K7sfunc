@@ -167,9 +167,7 @@ def DRBA_HUB(
 		_check_plugin(func_name, "ort")
 	else :
 		_check_plugin(func_name, "trt")
-	if sc_mode == 1 :
-		_check_plugin(func_name, "misc")
-	elif sc_mode == 2 :
+	if sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 	_check_plugin(func_name, "akarin")
 
@@ -387,9 +385,7 @@ def RIFE_STD(
 	_check_plugin(func_name, "rife")
 	if skip :
 		_check_plugin(func_name, "vmaf")
-	if sc_mode == 1 :
-		_check_plugin(func_name, "misc")
-	elif sc_mode == 2 :
+	if sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 
 	fmt_in = input.format.id
@@ -447,9 +443,7 @@ def RIFE_ORT_HUB(
 	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
 
 	_check_plugin(func_name, "ort")
-	if sc_mode == 1 :
-		_check_plugin(func_name, "misc")
-	elif sc_mode == 2 :
+	if sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 
 	if backend_type == "coreml" :
@@ -647,9 +641,7 @@ def RIFE_NV(
 	_validate_numeric(func_name, "ws_size", ws_size, min_val=0, int_only=True)
 
 	_check_plugin(func_name, "trt")
-	if sc_mode == 1 :
-		_check_plugin(func_name, "misc")
-	elif sc_mode == 2 :
+	if sc_mode == 2 :
 		_check_plugin(func_name, "mv")
 	_check_plugin(func_name, "akarin")
 

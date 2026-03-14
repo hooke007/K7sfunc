@@ -14,7 +14,7 @@ from ._internal import (
 	_check_plugin,
 	_check_script,
 )
-from .mod_helper import EQ
+from .mod_helper import EQ, SCDetect2
 
 __all__ = [
 	"CSC_UV",
@@ -246,6 +246,16 @@ def DEINT_EX(
 	_validate_bool(func_name, "cpu", cpu)
 	_validate_literal(func_name, "gpu", gpu, [-1, 0, 1, 2])
 
+	_check_plugin(func_name, "eedi3m")
+	_check_plugin(func_name, "fft3dfilter")
+	_check_plugin(func_name, "knlm")
+	_check_plugin(func_name, "mv")
+	_check_plugin(func_name, "nnedi3cl")
+	_check_plugin(func_name, "znedi3")
+	_check_plugin(func_name, "rgvs")
+	_check_plugin(func_name, "zsmooth")
+
+	from ._external import dfttest2
 	from ._external import qtgmc
 
 	h_in = input.height
@@ -369,14 +379,13 @@ def STAB_STD(
 	func_name = "STAB_STD"
 	_validate_input_clip(func_name, input)
 
-	_check_plugin(func_name, "focus2")
 	_check_plugin(func_name, "mv")
-	_check_plugin(func_name, "misc")
 	_check_plugin(func_name, "rgvs")
 
-	threshold = 255 << (input.format.bits_per_sample - 8)
-	temp = input.focus2.TemporalSoften2(7, threshold, threshold, 25, 2)
-	inter = core.std.Interleave([core.rgvs.Repair(temp, input.focus2.TemporalSoften2(1, threshold, threshold, 25, 2), mode=[1]), input])
+	sc_thr = 25 / 255
+	clip = SCDetect2(input, threshold=sc_thr)
+	temp = clip.std.AverageFrames(weights=[1] * 15, scenechange=sc_thr)
+	inter = core.std.Interleave([core.rgvs.Repair(temp, clip.std.AverageFrames(weights=[1] * 3, scenechange=sc_thr), mode=[1]), clip])
 	mdata = inter.mv.DepanEstimate(trust=0, dxmax=4, dymax=4)
 	mdata_fin = inter.mv.DepanCompensate(data=mdata, offset=-1, mirror=15)
 	output = mdata_fin[::2]
@@ -396,22 +405,10 @@ def STAB_HQ(
 	_validate_input_clip(func_name, input)
 
 	_check_plugin(func_name, "mv")
-	_check_plugin(func_name, "misc")
 	_check_plugin(func_name, "rgvs")
 
 	def _scdetect(clip: vs.VideoNode, threshold: float = 0.1) -> vs.VideoNode :
-		def _copy_property(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame :
-			fout = f[0].copy()
-			fout.props["_SceneChangePrev"] = f[1].props["_SceneChangePrev"]
-			fout.props["_SceneChangeNext"] = f[1].props["_SceneChangeNext"]
-			return fout
-		sc = clip
-		if clip.format.color_family == vs.RGB :
-			sc = core.resize.Point(clip=clip, format=vs.GRAY8, matrix_s="709")
-		sc = sc.misc.SCDetect(threshold=threshold)
-		if clip.format.color_family == vs.RGB :
-			sc = clip.std.ModifyFrame(clips=[clip, sc], selector=_copy_property)
-		return sc
+		return SCDetect2(clip, threshold=threshold)
 
 	def _average_frames(
 		clip: vs.VideoNode, weights: typing.Union[float, typing.Sequence[float]],

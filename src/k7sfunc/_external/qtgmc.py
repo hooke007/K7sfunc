@@ -2,7 +2,7 @@
 ### QTGMC
 ##################################################
 
-__version__ = "0.3.3"
+__version__ = "0.4.0"
 
 __all__ = [ "QTGMC_obs", "QTGMCv2"]
 
@@ -12,6 +12,8 @@ from vapoursynth import core
 import functools
 import math
 import typing
+
+from ..mod_helper import SCDetect2
 
 def QTGMC_obs_Scale(value, peak):
 	def _cround(x):
@@ -389,8 +391,9 @@ def QTGMC_obs(
 	# These kernels are approximately Gaussian kernels, which work well as a prefilter before motion analysis (hence the original name for this script)
 	# Create linear weightings of neighbors first                                      -2    -1    0     1     2
 	luma_threshold = 255 << (Input.format.bits_per_sample - 8)
-	if TR0 > 0: ts1 = bobbed.focus2.TemporalSoften2(1, luma_threshold, CMts, 28, 2)  # 0.00  0.33  0.33  0.33  0.00
-	if TR0 > 1: ts2 = bobbed.focus2.TemporalSoften2(2, luma_threshold, CMts, 28, 2)  # 0.20  0.20  0.20  0.20  0.20
+	bobbed_sc = SCDetect2(bobbed, threshold=28/255)
+	if TR0 > 0: ts1 = core.zsmooth.TemporalSoften(bobbed_sc, radius=1, threshold=[luma_threshold, CMts, CMts], scenechange=-1)
+	if TR0 > 1: ts2 = core.zsmooth.TemporalSoften(bobbed_sc, radius=2, threshold=[luma_threshold, CMts, CMts], scenechange=-1)
 
 	# Combine linear weightings to give binomial weightings - TR0=0: (1), TR0=1: (1:2:1), TR0=2: (1:4:6:4:1)
 	if TR0 <= 0:
