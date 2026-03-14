@@ -1,3 +1,5 @@
+
+当前文档匹配的版本 **dev**  
 _与 mpv-lazy 预捆绑的版本说明发布在[此处](https://github.com/hooke007/mpv_PlayKit/discussions/635)_
 
 # K7sfunc的Mac专用模块
@@ -6,8 +8,6 @@ _与 mpv-lazy 预捆绑的版本说明发布在[此处](https://github.com/hooke
 > 当初设计 [K7SFUNC](https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc) 的时候完全没有考虑Windows以外的平台，但实际上大多数模块都通用；
 > Mac配VS环境和Linux类似，因此不提供一条龙速装服务，仅提供参数和依赖说明；
 > 仅考虑Apple silicon芯片的可用性，[M2pro的测试结果参考](https://github.com/hooke007/mpv_PlayKit/pull/632)
-
-当前文档匹配的版本 **1.3.1**
 
 <br>
 
@@ -20,7 +20,7 @@ _与 mpv-lazy 预捆绑的版本说明发布在[此处](https://github.com/hooke
 
 > 所需依赖：  
 > pip3: `onnx`  
-> plugins: [Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
+> plugins: [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
 
 ```python
 RIFE_COREML(input=?, model=46, turbo=True, fps_in=23.976, fps_num=2, fps_den=1, sc_mode=1, be=0, gpu_t=2)

@@ -1,3 +1,5 @@
+
+**当前文档对应的版本 dev **  
 _与 mpv-lazy 预捆绑的版本说明发布在[此处](https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc)_
 
 # K7SFUNC
@@ -102,8 +104,6 @@ step03.set_output()                                                        # 行
 更多示例（如果你不具备相关知识或不熟悉上文，则不建议）参考 [仓库内的vpy脚本](https://github.com/hooke007/mpv_PlayKit/tree/main/portable_config/vs)  
 
 # 2. 模块说明
-
-**对应的版本 1.3.1 **
 
 - _带 `_NV` 后缀的模块为nvidia RTX显卡专用。_
 
@@ -410,7 +410,7 @@ DRBA_NV(input=?, model=2, int8_qnt=False, turbo=1, fps_in=23.976, fps_num=2, fps
 
 <details>
 
-> 所需依赖：[Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [RIFE(fork)](https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan) + [VMAF](https://vsdb.top/plugins/vmaf)
+> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [RIFE(fork)](https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan) + [VMAF](https://vsdb.top/plugins/vmaf)
 
 ```python
 RIFE_STD(input=?, model=21, turbo=2, fps_num=2, fps_den=1, sc_mode=1, stat_th=60.0, gpu=0, gpu_t=2)
@@ -443,7 +443,7 @@ RIFE_STD(input=?, model=21, turbo=2, fps_num=2, fps_den=1, sc_mode=1, stat_th=60
 
 > 所需依赖：  
 > pip3: `onnx`  
-> plugins: [akarin](https://vsdb.top/plugins/akarin) + [Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
+> plugins: [akarin](https://vsdb.top/plugins/akarin) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
 
 ```python
 RIFE_DML(input=?, model=46, turbo=True, fps_in=23.976, fps_num=2, fps_den=1, sc_mode=1, gpu=0, gpu_t=2)
@@ -470,7 +470,7 @@ RIFE_DML(input=?, model=46, turbo=True, fps_in=23.976, fps_num=2, fps_den=1, sc_
 
 > 所需依赖：  
 > pip3: `onnx`  
-> plugins: [akarin](https://vsdb.top/plugins/akarin) + [Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
+> plugins: [akarin](https://vsdb.top/plugins/akarin) + [MVTools](https://vsdb.top/plugins/mv) + [vsmlrt](https://github.com/AmusementClub/vs-mlrt)
 
 ```python
 RIFE_NV(input=?, model=46, int8_qnt=False, turbo=2, fps_in=23.976, fps_num=2, fps_den=1, sc_mode=1, gpu=0, gpu_t=2, ws_size=0)
@@ -875,7 +875,7 @@ DEINT_STD(input=?, ref_m=1, tff=True, gpu=-1, deint_m=1)
 ### DEINT_EX
 
 > 所需依赖：  
-> plugins: [znedi3](https://vsdb.top/plugins/znedi3) + [NNEDI3CL](https://vsdb.top/plugins/nnedi3cl) + [EEDI3](https://vsdb.top/plugins/eedi3m) + [FFT3DFilter](https://vsdb.top/plugins/fft3dfilter) + [TemporalSoften2](https://vsdb.top/plugins/focus2) + [libfftw3f-3.dll](http://fftw.org/install/windows.html) + [MVTools](https://vsdb.top/plugins/mv) + [Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [KNLMeansCL](https://vsdb.top/plugins/knlm) + [dfttest2](https://github.com/AmusementClub/vs-dfttest2)
+> plugins: [znedi3](https://vsdb.top/plugins/znedi3) + [NNEDI3CL](https://vsdb.top/plugins/nnedi3cl) + [EEDI3](https://vsdb.top/plugins/eedi3m) + [FFT3DFilter](https://vsdb.top/plugins/fft3dfilter) + [TemporalSoften2](https://vsdb.top/plugins/focus2) + [libfftw3f-3.dll](http://fftw.org/install/windows.html) + [MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [KNLMeansCL](https://vsdb.top/plugins/knlm) + [dfttest2](https://github.com/AmusementClub/vs-dfttest2) + [zsmooth](https://github.com/adworacz/zsmooth)
 
 ```python
 DEINT_EX(input=?, fps_in=23.976, deint_lv=6, src_type=0, deint_den=1, tff=0, cpu=True, gpu=-1)
@@ -948,7 +948,7 @@ IVTC_STD(input=?, fps_in=25, ivtc_m=1)
 
 ### STAB_STD
 
-> 所需依赖：[Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [TemporalSoften2](https://vsdb.top/plugins/focus2)
+> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [TemporalSoften2](https://vsdb.top/plugins/focus2)
 
 ```python
 STAB_STD(input=?)
@@ -960,7 +960,7 @@ STAB_STD(input=?)
 
 ### STAB_HQ
 
-> 所需依赖：[Miscellaneous_Filters](https://vsdb.top/plugins/misc) + [MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs)
+> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs)
 
 ```python
 STAB_HQ(input=?)

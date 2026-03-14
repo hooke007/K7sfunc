@@ -255,7 +255,6 @@ def DEINT_EX(
 	_check_plugin(func_name, "rgvs")
 	_check_plugin(func_name, "zsmooth")
 
-	from ._external import dfttest2
 	from ._external import qtgmc
 
 	h_in = input.height
