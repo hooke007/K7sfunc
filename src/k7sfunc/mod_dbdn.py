@@ -536,7 +536,7 @@ def NLM_STD(
 	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
 
 	if blur_m == 1 :
-		_check_plugin(func_name, "rgvs")
+		_check_plugin(func_name, "zsmooth")
 	if nlm_m == 1 :
 		_check_plugin(func_name, "knlm")
 	elif nlm_m == 2 :
@@ -591,7 +591,7 @@ def NLM_NV(
 
 	_check_plugin(func_name, "nlm_cuda")
 	if blur_m == 1 :
-		_check_plugin(func_name, "rgvs")
+		_check_plugin(func_name, "zsmooth")
 
 	fmt_in = input.format.id
 	blur, diff = LAYER_HIGH(input=input, blur_m=blur_m)

@@ -252,7 +252,6 @@ def DEINT_EX(
 	_check_plugin(func_name, "mv")
 	_check_plugin(func_name, "nnedi3cl")
 	_check_plugin(func_name, "znedi3")
-	_check_plugin(func_name, "rgvs")
 	_check_plugin(func_name, "zsmooth")
 
 	from ._external import qtgmc
@@ -379,12 +378,12 @@ def STAB_STD(
 	_validate_input_clip(func_name, input)
 
 	_check_plugin(func_name, "mv")
-	_check_plugin(func_name, "rgvs")
+	_check_plugin(func_name, "zsmooth")
 
 	sc_thr = 25 / 255
 	clip = SCDetect2(input, threshold=sc_thr)
 	temp = clip.std.AverageFrames(weights=[1] * 15, scenechange=sc_thr)
-	inter = core.std.Interleave([core.rgvs.Repair(temp, clip.std.AverageFrames(weights=[1] * 3, scenechange=sc_thr), mode=[1]), clip])
+	inter = core.std.Interleave([core.zsmooth.Repair(temp, clip.std.AverageFrames(weights=[1] * 3, scenechange=sc_thr), mode=[1]), clip])
 	mdata = inter.mv.DepanEstimate(trust=0, dxmax=4, dymax=4)
 	mdata_fin = inter.mv.DepanCompensate(data=mdata, offset=-1, mirror=15)
 	output = mdata_fin[::2]
@@ -404,7 +403,7 @@ def STAB_HQ(
 	_validate_input_clip(func_name, input)
 
 	_check_plugin(func_name, "mv")
-	_check_plugin(func_name, "rgvs")
+	_check_plugin(func_name, "zsmooth")
 
 	def _scdetect(clip: vs.VideoNode, threshold: float = 0.1) -> vs.VideoNode :
 		return SCDetect2(clip, threshold=threshold)
@@ -419,7 +418,7 @@ def STAB_HQ(
 
 	def _Stab(clp, dxmax=4, dymax=4, mirror=0) :
 		temp = _average_frames(clp, weights=[1] * 15, scenechange=25 / 255)
-		inter = core.std.Interleave([core.rgvs.Repair(temp, _average_frames(clp, weights=[1] * 3, scenechange=25 / 255), mode=[1]), clp])
+		inter = core.std.Interleave([core.zsmooth.Repair(temp, _average_frames(clp, weights=[1] * 3, scenechange=25 / 255), mode=[1]), clp])
 		mdata = inter.mv.DepanEstimate(trust=0, dxmax=dxmax, dymax=dymax)
 		last = inter.mv.DepanCompensate(data=mdata, offset=-1, mirror=mirror)
 		return last[::2]

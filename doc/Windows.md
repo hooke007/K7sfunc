@@ -747,7 +747,7 @@ FFT3D_STD(input=?, mode=1, nr_lv=2.0, plane=[0], frame_bk=3, cpu_t=6)
 
 ### NLM_STD
 
-> 所需依赖：[KNLMeansCL](https://vsdb.top/plugins/knlm) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [vs-nlm-ispc](https://github.com/AmusementClub/vs-nlm-ispc)
+> 所需依赖：[KNLMeansCL](https://vsdb.top/plugins/knlm) + [zsmooth](https://github.com/adworacz/zsmooth) + [vs-nlm-ispc](https://github.com/AmusementClub/vs-nlm-ispc)
 
 ```python
 NLM_STD(input=?, blur_m=2, nlm_m=1, frame_num=1, rad_sw=2, rad_snw=2, nr_lv=3.0, gpu=0)
@@ -770,7 +770,7 @@ NLM_STD(input=?, blur_m=2, nlm_m=1, frame_num=1, rad_sw=2, rad_snw=2, nr_lv=3.0,
 
 ### NLM_NV
 
-> 所需依赖：[RemoveGrain](https://vsdb.top/plugins/rgvs) + [vs-nlm-cuda](https://github.com/AmusementClub/vs-nlm-cuda)
+> 所需依赖：[vs-nlm-cuda](https://github.com/AmusementClub/vs-nlm-cuda) + [zsmooth](https://github.com/adworacz/zsmooth)
 
 ```python
 NLM_NV(input=?, blur_m=2, frame_num=1, rad_sw=2, rad_snw=2, nr_lv=3.0, gpu=0, gpu_t=4)
@@ -875,7 +875,7 @@ DEINT_STD(input=?, ref_m=1, tff=True, gpu=-1, deint_m=1)
 ### DEINT_EX
 
 > 所需依赖：  
-> plugins: [znedi3](https://vsdb.top/plugins/znedi3) + [NNEDI3CL](https://vsdb.top/plugins/nnedi3cl) + [EEDI3](https://vsdb.top/plugins/eedi3m) + [FFT3DFilter](https://vsdb.top/plugins/fft3dfilter) + [TemporalSoften2](https://vsdb.top/plugins/focus2) + [libfftw3f-3.dll](http://fftw.org/install/windows.html) + [MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [KNLMeansCL](https://vsdb.top/plugins/knlm) + [dfttest2](https://github.com/AmusementClub/vs-dfttest2) + [zsmooth](https://github.com/adworacz/zsmooth)
+> plugins: [znedi3](https://vsdb.top/plugins/znedi3) + [NNEDI3CL](https://vsdb.top/plugins/nnedi3cl) + [EEDI3](https://vsdb.top/plugins/eedi3m) + [FFT3DFilter](https://vsdb.top/plugins/fft3dfilter) + [libfftw3f-3.dll](http://fftw.org/install/windows.html) + [MVTools](https://vsdb.top/plugins/mv) + [KNLMeansCL](https://vsdb.top/plugins/knlm) + [dfttest2](https://github.com/AmusementClub/vs-dfttest2) + [zsmooth](https://github.com/adworacz/zsmooth)
 
 ```python
 DEINT_EX(input=?, fps_in=23.976, deint_lv=6, src_type=0, deint_den=1, tff=0, cpu=True, gpu=-1)
@@ -948,7 +948,7 @@ IVTC_STD(input=?, fps_in=25, ivtc_m=1)
 
 ### STAB_STD
 
-> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs) + [TemporalSoften2](https://vsdb.top/plugins/focus2)
+> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [zsmooth](https://github.com/adworacz/zsmooth)
 
 ```python
 STAB_STD(input=?)
@@ -960,7 +960,7 @@ STAB_STD(input=?)
 
 ### STAB_HQ
 
-> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [RemoveGrain](https://vsdb.top/plugins/rgvs)
+> 所需依赖：[MVTools](https://vsdb.top/plugins/mv) + [zsmooth](https://github.com/adworacz/zsmooth)
 
 ```python
 STAB_HQ(input=?)

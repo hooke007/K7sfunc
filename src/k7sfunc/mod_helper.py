@@ -193,9 +193,9 @@ def LAYER_HIGH(
 		output_blur = cut0
 		output_diff = None
 	elif blur_m == 1 :
-		blur = core.rgvs.RemoveGrain(clip=cut0, mode=20)
-		blur = core.rgvs.RemoveGrain(clip=blur, mode=20)
-		output_blur = core.rgvs.RemoveGrain(clip=blur, mode=20)
+		blur = core.zsmooth.RemoveGrain(clip=cut0, mode=20)
+		blur = core.zsmooth.RemoveGrain(clip=blur, mode=20)
+		output_blur = core.zsmooth.RemoveGrain(clip=blur, mode=20)
 	elif blur_m == 2 :
 		blur = core.std.Convolution(clip=cut0, matrix=[1, 1, 1, 1, 1, 1, 1, 1, 1])
 		blur = core.std.Convolution(clip=blur, matrix=[1, 1, 1, 1, 1, 1, 1, 1, 1])
